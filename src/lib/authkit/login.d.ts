@@ -19,7 +19,7 @@ export interface LoginResult {
 
 /** Portal-compatible credential login against MSSQL user_ptrj + RS256 keys. */
 export declare function loginWithCredentials(args?: {
-  email?: string
+  username?: string
   password?: string
   keysDir?: string
 }): Promise<LoginResult>

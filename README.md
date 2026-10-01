@@ -63,7 +63,7 @@ Frontend membaca `body.error` saat `!res.ok` dan me-redirect ke `/login` pada 40
 | Method | Path | Sumber | Keterangan |
 |---|---|---|---|
 | GET | `/api/health` | — | publik |
-| POST | `/api/auth/login` | `extend_db_ptrj.user_ptrj` | body `{ email, password }` → set cookie `auth-token` (RS256); role di luar allowlist → 403 |
+| POST | `/api/auth/login` | `extend_db_ptrj.user_ptrj` | body `{ username, password }` → set cookie `auth-token` (RS256); role di luar allowlist → 403 |
 | POST | `/api/auth/logout` | — | publik |
 | GET | `/api/auth/me` | — | sesi aktif / 401 JSON |
 | GET | `/api/employees` | EMPLOYEE_MASTER | `q`, `division`, `status`, `gender`, `page`, `limit`, `sort`, `dir` |

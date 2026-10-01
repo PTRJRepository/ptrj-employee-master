@@ -11,12 +11,12 @@
 // Dependencies are LAZY-IMPORTED (mssql, bcryptjs) and resolved up-tree from
 // the repo root node_modules, so the kit itself stays dependency-light.
 //
-// Exports: loginWithCredentials({ email, password, keysDir }) →
+// Exports: loginWithCredentials({ username, password, keysDir }) →
 //   { ok, status, error?, token?, user? }
 
-export async function loginWithCredentials({ email, password, keysDir } = {}) {
-    if (!email || !password) {
-        return { ok: false, status: 400, error: 'Email dan password harus diisi' };
+export async function loginWithCredentials({ username, password, keysDir } = {}) {
+    if (!username || !password) {
+        return { ok: false, status: 400, error: 'Username dan password harus diisi' };
     }
     // Lazy imports keep startup fast when login is never used.
     const [{ default: sql }, { default: bcrypt }, { createSign }, { readFileSync }, { resolve }] =
@@ -30,7 +30,7 @@ export async function loginWithCredentials({ email, password, keysDir } = {}) {
     // Dev bypass — same env switches as the portal (Dashboard_Utama auth-service).
     const BYPASS_USER = env.AUTH_BYPASS_USERNAME || 'bypss_ptrj';
     const BYPASS_PASS = env.AUTH_BYPASS_PASSWORD || 'bypass_ptrj123';
-    if (env.AUTH_BYPASS_ENABLED !== 'false' && email === BYPASS_USER && password === BYPASS_PASS) {
+    if (env.AUTH_BYPASS_ENABLED !== 'false' && username === BYPASS_USER && password === BYPASS_PASS) {
         return issue(sql, createSign, readFileSync, resolve, keysDir, {
             id: 0, name: 'Bypass PTRJ', email: BYPASS_USER, role: 'ADMIN', divisi: 'ALL',
         });
@@ -50,13 +50,13 @@ export async function loginWithCredentials({ email, password, keysDir } = {}) {
         }).connect();
 
         const result = await pool.request()
-            .input('email', sql.NVarChar, email)
-            .query('SELECT * FROM user_ptrj WHERE email = @email');
+            .input('username', sql.NVarChar, username)
+            .query('SELECT * FROM user_ptrj WHERE name = @username');
         const row = result.recordset[0];
-        if (!row) return { ok: false, status: 401, error: 'Email atau password salah' };
+        if (!row) return { ok: false, status: 401, error: 'Username atau password salah' };
 
         const valid = await bcrypt.compare(password, row.password);
-        if (!valid) return { ok: false, status: 401, error: 'Email atau password salah' };
+        if (!valid) return { ok: false, status: 401, error: 'Username atau password salah' };
 
         return issue(sql, createSign, readFileSync, resolve, keysDir, {
             id: row.id, name: row.name, email: row.email, role: row.role, divisi: row.divisi ?? null,

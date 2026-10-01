@@ -97,9 +97,9 @@ export async function handleAuthTraffic(
 async function doLogin(req: Request): Promise<Response> {
   const raw: unknown = await req.json().catch(() => ({}))
   const body = (raw ?? {}) as Record<string, unknown>
-  const email = String(body.email ?? '').trim()
+  const username = String(body.username ?? '').trim()
   const password = String(body.password ?? '')
-  const result = await loginWithCredentials({ email, password, keysDir: KEYS_DIR })
+  const result = await loginWithCredentials({ username, password, keysDir: KEYS_DIR })
   if (!result.ok || !result.token) {
     return json(result.status ?? 401, { success: false, error: result.error ?? 'Login gagal' })
   }
@@ -174,10 +174,10 @@ export function loginPageHtml(): string {
     <h1>Portal <span>Karyawan</span></h1>
     <p class="sub">Master Informasi Karyawan Terpusat — HRD PT Rebinmas Jaya.<br />Masuk dengan akun portal Anda.</p>
     <form id="f" autocomplete="on">
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required autofocus placeholder="nama@rebinmas" />
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required autofocus placeholder="username" autocomplete="username" />
       <label for="password">Password</label>
-      <input id="password" name="password" type="password" required placeholder="••••••••" />
+      <input id="password" name="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
       <button type="submit" id="btn">Masuk</button>
       <div class="err" id="err"></div>
     </form>
@@ -195,7 +195,7 @@ export function loginPageHtml(): string {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ email: document.getElementById('email').value.trim(), password: document.getElementById('password').value }),
+      body: JSON.stringify({ username: document.getElementById('username').value.trim(), password: document.getElementById('password').value }),
     }).then(async function (res) {
       var b = {}; try { b = await res.json(); } catch (_) {}
       if (!res.ok || b.success === false) { fail(b.error || ('HTTP ' + res.status)); return; }
