@@ -112,24 +112,27 @@ async function doLogin(req: Request): Promise<Response> {
 /* ── Pages ─────────────────────────────────────────────────────────────── */
 
 const PAGE_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
 
   :root {
-    --bg: #f5f5f0;
+    --bg: #f8f6f3;
     --surface: #ffffff;
-    --ink: #1a1a1a;
-    --ink-soft: #4a4a4a;
-    --ink-mute: #8a8a8a;
-    --line: #1a1a1a;
-    --accent: #2563eb;
-  --accent-deep: #1d4ed8;
-    --accent-soft: #dbeafe;
-    --ok: #16a34a;
-    --ok-soft: #dcfce7;
-    --warn: #ca8a04;
-    --warn-soft: #fef9c3;
-    --radius: 2px;
-    --shadow: 4px 4px 0px var(--ink);
+    --surface-warm: #faf8f5;
+    --ink: #2c2c2c;
+    --ink-soft: #5a5a5a;
+    --ink-mute: #9a9a9a;
+    --line: #e8e4e0;
+    --line-strong: #d4d0cc;
+    --accent: #4a7c59;
+    --accent-deep: #3d6b4c;
+    --accent-soft: #e8f0ea;
+    --accent-warm: #8b6f47;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+    --radius-sm: 6px;
+    --radius: 12px;
+    --radius-lg: 20px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,22 +140,21 @@ const PAGE_CSS = `
   body {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.1fr 1fr;
     background: var(--bg);
     color: var(--ink);
     font-family: "Inter", system-ui, sans-serif;
     overflow-x: hidden;
   }
 
-  /* ── Left panel: branding + visual elements ─────────────────────── */
+  /* ── Left panel: natural scene ──────────────────────────────────── */
   .brand-panel {
     position: relative;
-    padding: 48px 40px;
+    padding: 56px 48px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    background: var(--ink);
-    color: var(--bg);
+    background: linear-gradient(160deg, #e8f0ea 0%, #d4e4d8 50%, #c8dcc8 100%);
     overflow: hidden;
   }
 
@@ -160,22 +162,20 @@ const PAGE_CSS = `
     content: '';
     position: absolute;
     inset: 0;
-    background-image:
-      linear-gradient(rgba(245,245,240,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(245,245,240,0.03) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(139,111,71,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(74,124,89,0.1) 0%, transparent 60%);
     pointer-events: none;
   }
 
   .brand-panel::after {
     content: '';
     position: absolute;
-    bottom: -120px;
-    right: -120px;
-    width: 320px;
-    height: 320px;
-    border: 2px solid rgba(245,245,240,0.08);
-    border-radius: 50%;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(to top, rgba(74,124,89,0.12), transparent);
     pointer-events: none;
   }
 
@@ -188,56 +188,54 @@ const PAGE_CSS = `
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 14px;
-    border: 1px solid rgba(245,245,240,0.2);
-    border-radius: var(--radius);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(245,245,240,0.7);
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.8);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+    box-shadow: var(--shadow-sm);
   }
 
   .brand-mark::before {
     content: '';
     width: 8px;
     height: 8px;
-    background: var(--ok);
+    background: var(--accent);
     border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 
   .brand-hero {
     position: relative;
     z-index: 1;
-    margin-top: 64px;
+    margin-top: 72px;
   }
 
   .brand-hero h1 {
-    font-family: "Space Grotesk", sans-serif;
-    font-size: clamp(36px, 4vw, 52px);
-    font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    color: var(--bg);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: clamp(40px, 4.5vw, 56px);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
   .brand-hero h1 span {
     display: block;
     color: var(--accent);
+    font-style: italic;
   }
 
   .brand-hero p {
-    margin-top: 20px;
-    font-size: 15px;
+    margin-top: 24px;
+    font-size: 16px;
     line-height: 1.7;
-    color: rgba(245,245,240,0.6);
-    max-width: 400px;
+    color: var(--ink-soft);
+    max-width: 420px;
   }
 
   .brand-stats {
@@ -246,31 +244,39 @@ const PAGE_CSS = `
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
-    margin-top: 48px;
+    margin-top: 56px;
   }
 
   .stat-card {
-    padding: 16px;
-    border: 1px solid rgba(245,245,240,0.12);
+    padding: 20px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.7);
     border-radius: var(--radius);
-    background: rgba(245,245,240,0.04);
+    box-shadow: var(--shadow-sm);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
   }
 
   .stat-card .num {
-    font-family: "Space Grotesk", sans-serif;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
-    color: var(--bg);
+    color: var(--ink);
     line-height: 1;
+    letter-spacing: -0.02em;
   }
 
   .stat-card .lbl {
-    margin-top: 6px;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 10px;
-    letter-spacing: 0.06em;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(245,245,240,0.5);
+    color: var(--ink-mute);
   }
 
   .brand-bottom {
@@ -279,24 +285,23 @@ const PAGE_CSS = `
     display: flex;
     align-items: center;
     gap: 12px;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
-    color: rgba(245,245,240,0.4);
+    font-size: 12px;
+    color: var(--ink-mute);
   }
 
   .brand-bottom .dot {
     width: 6px;
     height: 6px;
-    background: var(--ok);
+    background: var(--accent);
     border-radius: 50%;
   }
 
-  /* ── Right panel: login form ────────────────────────────────────── */
+  /* ── Right panel: form ───────────────────────────────────────────── */
   .form-panel {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 40px;
+    padding: 56px 48px;
     position: relative;
   }
 
@@ -306,31 +311,28 @@ const PAGE_CSS = `
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent), var(--accent-deep), var(--accent));
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
   }
 
   .form-card {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
   }
 
   .form-header {
-    margin-bottom: 36px;
+    margin-bottom: 40px;
   }
 
   .form-header .eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 8px 14px;
     background: var(--accent-soft);
-    border-radius: var(--radius);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
+    border-radius: 100px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--accent-deep);
   }
 
@@ -343,115 +345,93 @@ const PAGE_CSS = `
   }
 
   .form-header h2 {
-    margin-top: 20px;
-    font-family: "Space Grotesk", sans-serif;
-    font-size: 28px;
+    margin-top: 24px;
+    font-size: 32px;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--ink);
   }
 
   .form-header p {
-    margin-top: 8px;
-    font-size: 14px;
+    margin-top: 10px;
+    font-size: 15px;
     color: var(--ink-mute);
     line-height: 1.6;
   }
 
   .field-group {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .field-group label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
+    display: block;
+    font-size: 13px;
     font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--ink-soft);
     margin-bottom: 8px;
   }
 
-  .field-group label .req {
-    color: var(--accent);
-  }
-
   .field-group input {
     width: 100%;
-    height: 48px;
-    padding: 0 16px;
-    border: 2px solid var(--line);
+    height: 52px;
+    padding: 0 18px;
+    border: 1.5px solid var(--line-strong);
     border-radius: var(--radius);
     background: var(--surface);
     color: var(--ink);
-    font-family: "Inter", sans-serif;
-    font-size: 15px;
+    font-size: 16px;
     outline: none;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
 
   .field-group input:focus {
     border-color: var(--accent);
-    box-shadow: var(--shadow);
+    box-shadow: 0 0 0 4px var(--accent-soft);
   }
 
   .field-group input::placeholder {
     color: var(--ink-mute);
   }
 
-  .field-hint {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--ink-mute);
-  }
-
   .form-actions {
-    margin-top: 28px;
+    margin-top: 32px;
   }
 
   .btn-primary {
     width: 100%;
-    height: 48px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    border: 2px solid var(--ink);
+    gap: 12px;
+    border: none;
     border-radius: var(--radius);
-    background: var(--ink);
-    color: var(--bg);
-    font-family: "Space Grotesk", sans-serif;
-    font-size: 15px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
     font-weight: 600;
-    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all 150ms ease;
-    box-shadow: var(--shadow);
+    transition: all 200ms ease;
+    box-shadow: var(--shadow-md);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0px var(--ink);
+    background: var(--accent-deep);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
   }
 
   .btn-primary:active:not(:disabled) {
-    transform: translate(0, 0);
-    box-shadow: 2px 2px 0px var(--ink);
+    transform: translateY(0);
   }
 
   .btn-primary:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
   .btn-primary .arrow {
-    transition: transform 150ms ease;
+    transition: transform 200ms ease;
   }
 
   .btn-primary:hover:not(:disabled) .arrow {
@@ -459,37 +439,37 @@ const PAGE_CSS = `
   }
 
   .form-footer {
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e5e0;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-mute);
   }
 
   .form-footer .secure {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
-  .form-footer .secure::before {
-    content: '🔒';
-    font-size: 12px;
+  .form-footer .secure svg {
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
   }
 
   .err {
     display: none;
-    margin-top: 16px;
-    padding: 12px 16px;
-    border: 2px solid #dc2626;
-    border-radius: var(--radius);
+    margin-top: 20px;
+    padding: 14px 18px;
     background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius);
     color: #991b1b;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 1.5;
   }
@@ -509,23 +489,23 @@ const PAGE_CSS = `
     }
 
     .form-panel {
-      padding: 32px 24px;
+      padding: 40px 24px;
     }
   }
 `
 
-/** Standalone brutalist sign-in page. */
+/** Standalone natural sign-in page. */
 export function loginPageHtml(): string {
   return `<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#1a1a1a" />
+<meta name="theme-color" content="#f8f6f3" />
 <title>Masuk — Portal Karyawan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
 <style>${PAGE_CSS}</style>
 </head>
 <body>
@@ -566,11 +546,11 @@ export function loginPageHtml(): string {
       </div>
       <form id="f" autocomplete="on">
         <div class="field-group">
-          <label for="username">Username <span class="req">*</span></label>
+          <label for="username">Username</label>
           <input id="username" name="username" type="text" required autofocus placeholder="Masukkan username" autocomplete="username" />
         </div>
         <div class="field-group">
-          <label for="password">Password <span class="req">*</span></label>
+          <label for="password">Password</label>
           <input id="password" name="password" type="password" required placeholder="Masukkan password" autocomplete="current-password" />
         </div>
         <div class="form-actions">
@@ -582,7 +562,10 @@ export function loginPageHtml(): string {
         <div class="err" id="err"></div>
       </form>
       <div class="form-footer">
-        <span class="secure">Koneksi Aman</span>
+        <span class="secure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Koneksi Aman
+        </span>
         <span>v1.0.0</span>
       </div>
     </div>

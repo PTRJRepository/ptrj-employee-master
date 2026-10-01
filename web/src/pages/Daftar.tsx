@@ -326,6 +326,8 @@ export default function Daftar({ me }: { me: MeResponse }) {
   const [selected, setSelected] = useState<Employee | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [flash, setFlash] = useState<Set<number>>(new Set())
+  const [editingCell, setEditingCell] = useState<{ rowId: number; field: string } | null>(null)
+  const [editValue, setEditValue] = useState('')
 
   // watermark bookkeeping for live updates
   const lastWm = useRef({ total: -1, watermark: -1 })
@@ -409,6 +411,27 @@ export default function Daftar({ me }: { me: MeResponse }) {
     setPage(1)
   }
 
+  const startEdit = (rowId: number, field: string, currentValue: string) => {
+    setEditingCell({ rowId, field })
+    setEditValue(currentValue)
+  }
+
+  const saveEdit = async () => {
+    if (!editingCell) return
+    const { rowId, field } = editingCell
+    setEditingCell(null)
+    try {
+      await api.updateEmployee(rowId, { [field]: editValue })
+      load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyimpan perubahan.')
+    }
+  }
+
+  const cancelEdit = () => {
+    setEditingCell(null)
+  }
+
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
 
@@ -485,9 +508,25 @@ export default function Daftar({ me }: { me: MeResponse }) {
       )}
 
       <div className="tablewrap">
-        <table className="data">
+        <table
+          className="data"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              const rows = table.querySelectorAll('tbody tr')
+              const currentIdx = Array.from(rows).findIndex((r) => r === document.activeElement)
+              if (currentIdx !== -1) {
+                const nextIdx = e.key === 'ArrowDown' ? currentIdx + 1 : currentIdx - 1
+                if (nextIdx >= 0 && nextIdx < rows.length) {
+                  rows[nextIdx].focus()
+                }
+              }
+            }
+          }}
+        >
           <thead>
             <tr>
+              <th className="row-num">#</th>
               <th style={{ width: '3.5rem' }}>No.</th>
               <th>
                 <button type="button" onClick={() => toggleSort('nama')} aria-label="Urutkan nama">
@@ -519,13 +558,13 @@ export default function Daftar({ me }: { me: MeResponse }) {
             {loading &&
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={`sk-${i}`}>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <div className="skel" style={{ width: `${90 - i * 6}%` }} />
                   </td>
                 </tr>
               ))}
             {!loading &&
-              (data?.items ?? []).map((row) => (
+              (data?.items ?? []).map((row, idx) => (
                 <tr
                   key={row.id}
                   tabIndex={0}
@@ -538,23 +577,166 @@ export default function Daftar({ me }: { me: MeResponse }) {
                     }
                   }}
                 >
+                  <td className="row-num">{(page - 1) * LIMIT + idx + 1}</td>
                   <td className="num">{row.no ?? '–'}</td>
-                  <td>
-                    <span className="cell-name">{row.nama}</span>
-                    {row.jabatan && <span className="cell-sub">{row.jabatan}</span>}
+                  <td
+                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'nama' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'nama', row.nama)}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'nama' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <span className="cell-name">{row.nama}</span>
+                        {row.jabatan && <span className="cell-sub">{row.jabatan}</span>}
+                      </>
+                    )}
                   </td>
-                  <td>
-                    <span className="tag">{row.division}</span>
-                    {row.sub_divisi && <span className="cell-sub">{row.sub_divisi}</span>}
+                  <td
+                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'division' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'division', row.division)}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'division' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <span className="tag">{row.division}</span>
+                        {row.sub_divisi && <span className="cell-sub">{row.sub_divisi}</span>}
+                      </>
+                    )}
                   </td>
-                  <td>
-                    <span className="tag tag--muted">{row.status ?? '–'}</span>
+                  <td
+                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'status' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'status', row.status ?? '')}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'status' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      <span className="tag tag--muted">{row.status ?? '–'}</span>
+                    )}
                   </td>
-                  <td>{row.gender ?? '–'}</td>
-                  <td className="tnum">{shortDate(row.tanggal_masuk)}</td>
-                  <td className="mono">{row.no_ktp ?? '–'}</td>
-                  <td className="num">{rupiah(row.gaji_pokok)}</td>
-                  <td>{row.domisili ?? '–'}</td>
+                  <td
+                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'gender' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'gender', row.gender ?? '')}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'gender' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      row.gender ?? '–'
+                    )}
+                  </td>
+                  <td
+                    className={`editable tnum${editingCell?.rowId === row.id && editingCell?.field === 'tanggal_masuk' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'tanggal_masuk', row.tanggal_masuk ?? '')}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'tanggal_masuk' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      shortDate(row.tanggal_masuk)
+                    )}
+                  </td>
+                  <td
+                    className={`editable mono${editingCell?.rowId === row.id && editingCell?.field === 'no_ktp' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'no_ktp', row.no_ktp ?? '')}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'no_ktp' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      row.no_ktp ?? '–'
+                    )}
+                  </td>
+                  <td
+                    className={`editable num${editingCell?.rowId === row.id && editingCell?.field === 'gaji_pokok' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'gaji_pokok', String(row.gaji_pokok ?? ''))}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'gaji_pokok' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      rupiah(row.gaji_pokok)
+                    )}
+                  </td>
+                  <td
+                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'domisili' ? ' editing' : ''}`}
+                    onDoubleClick={() => startEdit(row.id, 'domisili', row.domisili ?? '')}
+                  >
+                    {editingCell?.rowId === row.id && editingCell?.field === 'domisili' ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={saveEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                      />
+                    ) : (
+                      row.domisili ?? '–'
+                    )}
+                  </td>
                 </tr>
               ))}
           </tbody>
@@ -582,6 +764,23 @@ export default function Daftar({ me }: { me: MeResponse }) {
             )}
           </div>
         )}
+      </div>
+
+      <div className="statusbar">
+        <span className="status-item">
+          <span className="dot"></span>
+          Siap
+        </span>
+        <span className="status-item">
+          Total: <strong>{nf.format(total)}</strong> karyawan
+        </span>
+        <span className="status-item">
+          Halaman: <strong>{page}</strong> / {totalPages}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span className="status-item">
+          Klik baris untuk detail · Enter untuk membuka
+        </span>
       </div>
 
       <div className="pager">

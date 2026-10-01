@@ -87,6 +87,198 @@ textarea {
   border: 0;
 }
 
+/* ── Excel-like table ──────────────────────────────────────────── */
+.tablewrap {
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  overflow: auto;
+  max-height: calc(100vh - 280px);
+  position: relative;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+table.data thead {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+table.data th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  background: var(--color-paper-2);
+  border-bottom: 2px solid var(--color-rule-2);
+  white-space: nowrap;
+  user-select: none;
+}
+
+table.data td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-rule);
+  vertical-align: top;
+}
+
+table.data tbody tr {
+  transition: background-color 100ms ease;
+}
+
+table.data tbody tr:hover {
+  background: var(--color-paper-2);
+}
+
+table.data tbody tr.selected {
+  background: var(--accent-soft);
+}
+
+table.data tbody tr.flash {
+  animation: flash 1.7s ease-out;
+}
+
+@keyframes flash {
+  0% { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
+
+/* Excel-like cell editing */
+table.data td.editable {
+  cursor: cell;
+  position: relative;
+}
+
+table.data td.editable:hover {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+table.data td.editing {
+  padding: 0;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+table.data td.editing input {
+  width: 100%;
+  height: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+/* Row number column like Excel */
+table.data td.row-num,
+table.data th.row-num {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  text-align: center;
+  color: var(--color-neutral);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: var(--color-paper-2);
+  border-right: 1px solid var(--color-rule-2);
+  user-select: none;
+}
+
+/* Column resize handle */
+table.data th {
+  position: relative;
+}
+
+table.data th::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+table.data th:hover::after {
+  background: var(--accent);
+  opacity: 0.3;
+}
+
+/* Status bar */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--color-paper-2);
+  border-top: 1px solid var(--color-rule);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.statusbar .status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusbar .status-item .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.statusbar .status-item .dot.warning {
+  background: var(--warn);
+}
+
+/* Context menu */
+.context-menu {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  background: var(--surface);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.12));
+  padding: 4px;
+  min-width: 180px;
+}
+
+.context-menu .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--color-ink-2);
+  cursor: pointer;
+  transition: background-color 100ms ease;
+}
+
+.context-menu .menu-item:hover {
+  background: var(--color-paper-2);
+}
+
+.context-menu .menu-item.danger {
+  color: #dc2626;
+}
+
+.context-menu .menu-divider {
+  height: 1px;
+  background: var(--color-rule);
+  margin: 4px 0;
+}
+
 /* ── App shell ────────────────────────────────────────────────── */
 .shell {
   display: grid;
