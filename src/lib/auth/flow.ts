@@ -112,57 +112,416 @@ async function doLogin(req: Request): Promise<Response> {
 /* ── Pages ─────────────────────────────────────────────────────────────── */
 
 const PAGE_CSS = `
-  :root { color-scheme: light; }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a4a;
+    --ink-mute: #8a8a8a;
+    --line: #1a1a1a;
+    --accent: #2563eb;
+  --accent-deep: #1d4ed8;
+    --accent-soft: #dbeafe;
+    --ok: #16a34a;
+    --ok-soft: #dcfce7;
+    --warn: #ca8a04;
+    --warn-soft: #fef9c3;
+    --radius: 2px;
+    --shadow: 4px 4px 0px var(--ink);
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: oklch(98.5% 0.004 250); color: oklch(34% 0.018 257);
-    font-family: "Inter", ui-sans-serif, system-ui, sans-serif; padding: 24px;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    overflow-x: hidden;
   }
-  .card {
-    width: 380px; max-width: 100%; background: oklch(98.5% 0.004 250);
-    border: 1px solid oklch(90.5% 0.006 252);
-    border-radius: 10px; padding: 32px 28px;
+
+  /* ── Left panel: branding + visual elements ─────────────────────── */
+  .brand-panel {
+    position: relative;
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--ink);
+    color: var(--bg);
+    overflow: hidden;
   }
-  h1 { font-family: "Space Grotesk", "Segoe UI", sans-serif; font-size: 20px; font-weight: 600;
-       letter-spacing: -0.02em; color: oklch(24% 0.020 258); }
-  h1 span { color: oklch(46% 0.17 256); }
-  p.sub { margin-top: 6px; font-size: 13px; color: oklch(50% 0.016 256); line-height: 1.5; }
-  label { display: block; margin-top: 18px; font-size: 11px; font-weight: 500;
-          letter-spacing: 0.06em; text-transform: uppercase;
-          font-family: "JetBrains Mono", monospace; color: oklch(50% 0.016 256); }
-  input {
-    width: 100%; margin-top: 6px; height: 40px; padding: 0 12px; border-radius: 6px;
-    border: 1px solid oklch(84% 0.008 252); background: oklch(98.5% 0.004 250);
-    color: oklch(24% 0.020 258); outline: 2px solid transparent; outline-offset: 1px;
-    font-size: 14px; transition: border-color 120ms ease-out;
+
+  .brand-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,245,240,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,245,240,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
   }
-  input:focus { outline: 2px solid oklch(58% 0.20 256); border-color: oklch(58% 0.20 256); }
-  button {
-    width: 100%; margin-top: 22px; height: 40px; border: 0; border-radius: 6px;
-    background: oklch(58% 0.20 256); color: oklch(98.5% 0.01 256);
-    font-weight: 600; font-size: 14px; cursor: pointer;
-    transition: background-color 120ms ease-out;
+
+  .brand-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -120px;
+    right: -120px;
+    width: 320px;
+    height: 320px;
+    border: 2px solid rgba(245,245,240,0.08);
+    border-radius: 50%;
+    pointer-events: none;
   }
-  button:hover:not(:disabled) { background: oklch(46% 0.17 256); }
-  button:disabled { opacity: 0.55; cursor: default; }
+
+  .brand-top {
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border: 1px solid rgba(245,245,240,0.2);
+    border-radius: var(--radius);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(245,245,240,0.7);
+  }
+
+  .brand-mark::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--ok);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .brand-hero {
+    position: relative;
+    z-index: 1;
+    margin-top: 64px;
+  }
+
+  .brand-hero h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(36px, 4vw, 52px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    color: var(--bg);
+  }
+
+  .brand-hero h1 span {
+    display: block;
+    color: var(--accent);
+  }
+
+  .brand-hero p {
+    margin-top: 20px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(245,245,240,0.6);
+    max-width: 400px;
+  }
+
+  .brand-stats {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 48px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    border: 1px solid rgba(245,245,240,0.12);
+    border-radius: var(--radius);
+    background: rgba(245,245,240,0.04);
+  }
+
+  .stat-card .num {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--bg);
+    line-height: 1;
+  }
+
+  .stat-card .lbl {
+    margin-top: 6px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(245,245,240,0.5);
+  }
+
+  .brand-bottom {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: rgba(245,245,240,0.4);
+  }
+
+  .brand-bottom .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--ok);
+    border-radius: 50%;
+  }
+
+  /* ── Right panel: login form ────────────────────────────────────── */
+  .form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+    position: relative;
+  }
+
+  .form-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-deep), var(--accent));
+  }
+
+  .form-card {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .form-header {
+    margin-bottom: 36px;
+  }
+
+  .form-header .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+
+  .form-header .eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .form-header h2 {
+    margin-top: 20px;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .form-header p {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--ink-mute);
+    line-height: 1.6;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  .field-group label .req {
+    color: var(--accent);
+  }
+
+  .field-group input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: "Inter", sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .field-group input:focus {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+  }
+
+  .field-group input::placeholder {
+    color: var(--ink-mute);
+  }
+
+  .field-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+
+  .form-actions {
+    margin-top: 28px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--ink);
+    color: var(--bg);
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 150ms ease;
+    box-shadow: var(--shadow);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px var(--ink);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translate(0, 0);
+    box-shadow: 2px 2px 0px var(--ink);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary .arrow {
+    transition: transform 150ms ease;
+  }
+
+  .btn-primary:hover:not(:disabled) .arrow {
+    transform: translateX(4px);
+  }
+
+  .form-footer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e5e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+
+  .form-footer .secure {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-footer .secure::before {
+    content: '🔒';
+    font-size: 12px;
+  }
+
   .err {
-    display: none; margin-top: 16px; padding: 10px 12px; border-radius: 6px;
-    background: oklch(95% 0.03 25); border: 1px solid oklch(54% 0.19 25);
-    color: oklch(44% 0.17 25); font-size: 13px; line-height: 1.4;
+    display: none;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 2px solid #dc2626;
+    border-radius: var(--radius);
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
   }
-  footer { margin-top: 22px; font-size: 11px; color: oklch(63% 0.013 255); text-align: center;
-           font-family: "JetBrains Mono", monospace; }
+
+  .err.visible {
+    display: block;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    body {
+      grid-template-columns: 1fr;
+    }
+
+    .brand-panel {
+      display: none;
+    }
+
+    .form-panel {
+      padding: 32px 24px;
+    }
+  }
 `
 
-/** Standalone corporate-flat sign-in page. */
+/** Standalone brutalist sign-in page. */
 export function loginPageHtml(): string {
   return `<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#f5f7fb" />
+<meta name="theme-color" content="#1a1a1a" />
 <title>Masuk — Portal Karyawan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -170,27 +529,72 @@ export function loginPageHtml(): string {
 <style>${PAGE_CSS}</style>
 </head>
 <body>
-  <main class="card">
-    <h1>Portal <span>Karyawan</span></h1>
-    <p class="sub">Master Informasi Karyawan Terpusat — HRD PT Rebinmas Jaya.<br />Masuk dengan akun portal Anda.</p>
-    <form id="f" autocomplete="on">
-      <label for="username">Username</label>
-      <input id="username" name="username" type="text" required autofocus placeholder="username" autocomplete="username" />
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
-      <button type="submit" id="btn">Masuk</button>
-      <div class="err" id="err"></div>
-    </form>
-    <footer>Sesi RS256 setara portal utama · akun portal yang sama</footer>
+  <aside class="brand-panel">
+    <div class="brand-top">
+      <div class="brand-mark">PT Rebinmas Jaya</div>
+    </div>
+    <div class="brand-hero">
+      <h1>Portal<span>Karyawan</span></h1>
+      <p>Master Informasi Karyawan Terpusat — HRD PT Rebinmas Jaya. Akses data karyawan, riwayat perubahan, dan informasi sistem HR dalam satu portal terintegrasi.</p>
+    </div>
+    <div class="brand-stats">
+      <div class="stat-card">
+        <div class="num">7.6K+</div>
+        <div class="lbl">Karyawan</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">16</div>
+        <div class="lbl">Divisi</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">24/7</div>
+        <div class="lbl">Akses</div>
+      </div>
+    </div>
+    <div class="brand-bottom">
+      <span class="dot"></span>
+      <span>Sistem Online · RS256 Secured</span>
+    </div>
+  </aside>
+
+  <main class="form-panel">
+    <div class="form-card">
+      <div class="form-header">
+        <div class="eyebrow">Portal Karyawan</div>
+        <h2>Masuk</h2>
+        <p>Gunakan akun portal Anda untuk mengakses data karyawan.</p>
+      </div>
+      <form id="f" autocomplete="on">
+        <div class="field-group">
+          <label for="username">Username <span class="req">*</span></label>
+          <input id="username" name="username" type="text" required autofocus placeholder="Masukkan username" autocomplete="username" />
+        </div>
+        <div class="field-group">
+          <label for="password">Password <span class="req">*</span></label>
+          <input id="password" name="password" type="password" required placeholder="Masukkan password" autocomplete="current-password" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="btn" class="btn-primary">
+            <span>Masuk</span>
+            <span class="arrow">→</span>
+          </button>
+        </div>
+        <div class="err" id="err"></div>
+      </form>
+      <div class="form-footer">
+        <span class="secure">Koneksi Aman</span>
+        <span>v1.0.0</span>
+      </div>
+    </div>
   </main>
 <script>
 (function () {
   var base = ${JSON.stringify(MODULE_PREFIX)};
   var f = document.getElementById('f'), err = document.getElementById('err'), btn = document.getElementById('btn');
-  function fail(msg) { err.textContent = msg; err.style.display = 'block'; btn.disabled = false; }
+  function fail(msg) { err.textContent = msg; err.classList.add('visible'); btn.disabled = false; }
   f.addEventListener('submit', function (e) {
     e.preventDefault();
-    btn.disabled = true; err.style.display = 'none';
+    btn.disabled = true; err.classList.remove('visible');
     fetch(base + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
