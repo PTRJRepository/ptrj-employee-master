@@ -248,7 +248,7 @@ table.data th:hover::after {
   background: var(--surface);
   border: 1px solid var(--color-rule-2);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.12));
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
   padding: 4px;
   min-width: 180px;
 }
