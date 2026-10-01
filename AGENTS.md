@@ -133,11 +133,10 @@ values match the lowercase source lists.
 - No cross-module imports and no `Dashboard_Utama` imports. Shared code = copy
   (`src/lib/authkit/` mirrors `shared/authkit`; refresh by re-copying, not
   importing).
-- **This module has no `.git` of its own yet (2026-10-01)** — the parent repo
-  gitignores `Module Services/`. Do NOT `git add/commit` it from the repo root,
-  and do not assume `git status` here shows anything. When a
-  `ptrj-employee-master` repo is created, switch to per-module commits
-  (`docs/MONOREPO.md` §0a).
+- **Repo git sendiri sudah dibuat (2026-10-01)**: `ptrj-employee-master`
+  (private, branch `main`, remote `git@github.com:PTRJRepository/ptrj-employee-master.git`).
+  Commit dari dalam folder module ini (`docs/MONOREPO.md` §0a). Parent repo
+  meng-gitignore `Module Services/` — jangan commit modul dari repo root.
 
 ## Where things live (task → file)
 
