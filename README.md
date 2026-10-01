@@ -7,7 +7,8 @@ menyajikan API Elysia + SPA Vite yang sudah di-build.
 - Port kontrak: **8018** (`EMP_BASE_PATH` default `/employee-master`)
 - Gateway route: `employee-master` di `routes-config.json` → `http://127.0.0.1:8018`
 - Menu portal: `service_ptrj` `employee-master` ("Karyawan (HRD)"), group `lainnya`
-- Repo git: belum dibuat (2026-10-01) — lihat `docs/MONOREPO.md` §0a
+- Repo git sendiri sudah dibuat (2026-10-01): `ptrj-employee-master` (private, branch `main`, remote `git@github.com:PTRJRepository/ptrj-employee-master.git`)
+- Akses LAN: `http://<ip-mesin>:8018/employee-master/` (firewall rule sudah dibuat untuk port 8018)
 
 ## Run
 
@@ -81,8 +82,23 @@ Frontend membaca `body.error` saat `!res.ok` dan me-redirect ke `/login` pada 40
 | GET | `/api/sistem/stats` | `db_ptrj` HR_* | total/aktif/berhenti, top-10 dept, gender |
 
 SPA routes (`web/src/App.tsx`): `/` Ringkasan · `/daftar` Daftar · `/sistem`
-Data Sistem · `/riwayat` Riwayat. Frontend memanggil `${'/employee-master/api'}${path}`
-(`web/src/api.ts`), jadi base path ikut mount prefix.
+Data Sistem · `/bhl` Monitor BHL · `/riwayat` Riwayat. Frontend memanggil
+`${'/employee-master/api'}${path}` (`web/src/api.ts`), jadi base path ikut
+mount prefix.
+
+### Monitor BHL
+
+Halaman `/bhl` menampilkan karyawan yang perlu dievaluasi BHL (70 hari sejak
+tanggal masuk kerja):
+
+| Status | Arti |
+|---|---|
+| **Terlambat** | Lewat 70 hari (maksimal 30 hari, lebih dari itu tidak ditampilkan) |
+| **Segera** | ≤14 hari lagi menuju 70 hari |
+| **Akan Datang** | Masih lebih dari 14 hari menuju 70 hari |
+
+Filter dropdown dengan hitungan per status. Sumber data: `EMPLOYEE_MASTER`
+(sama dengan Data Manual).
 
 ## Auth & roles
 
