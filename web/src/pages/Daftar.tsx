@@ -81,8 +81,8 @@ function AddModal({
   )
 }
 
-/* ── Detail drawer (view + edit + delete) ───────────────────────── */
-function DetailDrawer({
+/* ── Detail popup (view + edit + delete) ───────────────────────── */
+function DetailPopup({
   item,
   meta,
   can,
@@ -102,6 +102,7 @@ function DetailDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [wide, setWide] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -158,10 +159,15 @@ function DetailDrawer({
   )
 
   return (
-    <>
-      <div className="scrim" onClick={() => !saving && onClose()} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={`Detail ${item.nama}`}>
-        <div className="drawer__head">
+    <div className="popup-overlay" onClick={() => !saving && onClose()}>
+      <div
+        className={`popup${wide ? ' popup--wide' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Detail ${item.nama}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="popup__head">
           <div style={{ minWidth: 0, flex: 1 }}>
             <span className="label-caps">
               {item.division}
@@ -169,12 +175,23 @@ function DetailDrawer({
             </span>
             <h2>{item.nama}</h2>
           </div>
-          <button type="button" className="iconbtn" onClick={onClose} aria-label="Tutup detail" disabled={saving}>
-            ✕
-          </button>
+          <div className="popup__actions">
+            <button
+              type="button"
+              className="iconbtn"
+              onClick={() => setWide(!wide)}
+              aria-label={wide ? 'Sempitkan' : 'Perlebar'}
+              title={wide ? 'Sempitkan' : 'Perlebar'}
+            >
+              {wide ? '⊟' : '⊞'}
+            </button>
+            <button type="button" className="iconbtn" onClick={onClose} aria-label="Tutup detail" disabled={saving}>
+              ✕
+            </button>
+          </div>
         </div>
 
-        <div className="drawer__body">
+        <div className="popup__body">
           {!editing ? (
             <>
               <section className="fsection">
@@ -234,7 +251,7 @@ function DetailDrawer({
           )}
         </div>
 
-        <div className="drawer__foot">
+        <div className="popup__foot">
           {!editing ? (
             <>
               {can.delete && (
@@ -295,8 +312,8 @@ function DetailDrawer({
             </div>
           </div>
         )}
-      </aside>
-    </>
+      </div>
+    </div>
   )
 }
 
@@ -796,7 +813,7 @@ export default function Daftar({ me }: { me: MeResponse }) {
       </div>
 
       {selected && meta && (
-        <DetailDrawer
+        <DetailPopup
           item={selected}
           meta={meta}
           can={{ edit: me.can.edit, delete: me.can.delete }}

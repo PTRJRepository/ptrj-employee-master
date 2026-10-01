@@ -5,6 +5,7 @@ import { toast, type ToastItem } from './toast'
 import Ringkasan from './pages/Ringkasan'
 import Daftar from './pages/Daftar'
 import Sistem from './pages/Sistem'
+import BhlMonitor from './pages/BhlMonitor'
 import Riwayat from './pages/Riwayat'
 
 /* ── Toast host ─────────────────────────────────────────────────── */
@@ -76,10 +77,11 @@ function Shell({ me }: { me: MeResponse }) {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('')
+  const [railOpen, setRailOpen] = useState(true)
 
   return (
     <div className="shell">
-      <aside className="rail">
+      <aside className={`rail${railOpen ? '' : ' rail--collapsed'}`}>
         <div className="rail__brand">
           <span className="rail__mark">
             Portal <span>Karyawan</span>
@@ -98,6 +100,10 @@ function Shell({ me }: { me: MeResponse }) {
           <NavLink to="/sistem" className="rail__link">
             <span className="rail__dot" aria-hidden="true" />
             Data Sistem
+          </NavLink>
+          <NavLink to="/bhl" className="rail__link">
+            <span className="rail__dot" aria-hidden="true" />
+            Monitor BHL
           </NavLink>
           <NavLink to="/riwayat" className="rail__link">
             <span className="rail__dot" aria-hidden="true" />
@@ -128,6 +134,15 @@ function Shell({ me }: { me: MeResponse }) {
 
       <div className="main">
         <header className="topbar">
+          <button
+            type="button"
+            className="iconbtn rail-toggle"
+            onClick={() => setRailOpen(!railOpen)}
+            aria-label={railOpen ? 'Tutup sidebar' : 'Buka sidebar'}
+            title={railOpen ? 'Tutup sidebar' : 'Buka sidebar'}
+          >
+            {railOpen ? '◀' : '▶'}
+          </button>
           <span className="topbar__title">Master Informasi Karyawan</span>
           <SearchPill />
           <div className="topbar__user">
@@ -145,6 +160,7 @@ function Shell({ me }: { me: MeResponse }) {
           <Route path="/" element={<Ringkasan me={me} />} />
           <Route path="/daftar" element={<Daftar me={me} />} />
           <Route path="/sistem" element={<Sistem />} />
+          <Route path="/bhl" element={<BhlMonitor me={me} />} />
           <Route path="/riwayat" element={<Riwayat />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

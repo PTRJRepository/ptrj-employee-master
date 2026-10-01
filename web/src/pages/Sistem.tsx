@@ -19,11 +19,12 @@ const REL_LABELS: Record<string, string> = {
   '7': 'Tanggungan lain',
 }
 
-/* ── Read-only detail drawer ────────────────────────────────────── */
-function SistemDrawer({ code, onClose }: { code: string; onClose: () => void }) {
+/* ── Read-only detail popup ────────────────────────────────────── */
+function SistemPopup({ code, onClose }: { code: string; onClose: () => void }) {
   const [item, setItem] = useState<SistemEmployee | null>(null)
   const [family, setFamily] = useState<SistemFamily[]>([])
   const [state, setState] = useState<'loading' | 'ok' | 'missing'>('loading')
+  const [wide, setWide] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -52,10 +53,15 @@ function SistemDrawer({ code, onClose }: { code: string; onClose: () => void }) 
   )
 
   return (
-    <>
-      <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={`Detail sistem ${code}`}>
-        <div className="drawer__head">
+    <div className="popup-overlay" onClick={onClose}>
+      <div
+        className={`popup${wide ? ' popup--wide' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Detail sistem ${code}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="popup__head">
           <div style={{ minWidth: 0, flex: 1 }}>
             <span className="label-caps">db_ptrj · HR_EMPLOYEE · {code}</span>
             <h2>{item?.EmpName ?? code}</h2>
@@ -63,11 +69,22 @@ function SistemDrawer({ code, onClose }: { code: string; onClose: () => void }) 
           <span className={`tag${item?.is_active ? ' tag--accent' : ' tag--muted'}`}>
             {item?.is_active ? 'aktif' : 'tidak aktif'}
           </span>
-          <button type="button" className="iconbtn" onClick={onClose} aria-label="Tutup detail">
-            ✕
-          </button>
+          <div className="popup__actions">
+            <button
+              type="button"
+              className="iconbtn"
+              onClick={() => setWide(!wide)}
+              aria-label={wide ? 'Sempitkan' : 'Perlebar'}
+              title={wide ? 'Sempitkan' : 'Perlebar'}
+            >
+              {wide ? '⊟' : '⊞'}
+            </button>
+            <button type="button" className="iconbtn" onClick={onClose} aria-label="Tutup detail">
+              ✕
+            </button>
+          </div>
         </div>
-        <div className="drawer__body">
+        <div className="popup__body">
           {state === 'loading' && <div className="skel" style={{ height: 120 }} />}
           {state === 'missing' && (
             <div className="empty">
@@ -123,8 +140,8 @@ function SistemDrawer({ code, onClose }: { code: string; onClose: () => void }) 
             </>
           )}
         </div>
-      </aside>
-    </>
+      </div>
+    </div>
   )
 }
 
@@ -317,7 +334,7 @@ export default function Sistem() {
         </button>
       </div>
 
-      {selected && <SistemDrawer code={selected} onClose={() => setSelected(null)} />}
+      {selected && <SistemPopup code={selected} onClose={() => setSelected(null)} />}
     </main>
   )
 }
