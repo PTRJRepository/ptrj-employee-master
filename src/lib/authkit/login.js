@@ -51,7 +51,7 @@ export async function loginWithCredentials({ username, password, keysDir } = {})
 
         const result = await pool.request()
             .input('username', sql.NVarChar, username)
-            .query('SELECT * FROM user_ptrj WHERE name = @username');
+            .query('SELECT * FROM user_ptrj WHERE name = @username OR email = @username');
         const row = result.recordset[0];
         if (!row) return { ok: false, status: 401, error: 'Username atau password salah' };
 
