@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, type Employee, type MeResponse } from '../api'
 
 const BHL_DAYS = 70
+const MAX_OVERDUE_DAYS = 30 // terlambat maksimal 1 bulan
 
 interface BhlItem {
   id: number
@@ -15,11 +16,15 @@ interface BhlItem {
   status: 'overdue' | 'warning' | 'upcoming'
 }
 
-function calcBhl(tanggal_masuk: string): { days_elapsed: number; days_remaining: number; status: BhlItem['status'] } {
+function calcBhl(tanggal_masuk: string): { days_elapsed: number; days_remaining: number; status: BhlItem['status'] } | null {
   const masuk = new Date(tanggal_masuk)
   const now = new Date()
   const diff = Math.floor((now.getTime() - masuk.getTime()) / (1000 * 60 * 60 * 24))
   const remaining = BHL_DAYS - diff
+  
+  // Skip if more than MAX_OVERDUE_DAYS overdue
+  if (remaining < -MAX_OVERDUE_DAYS) return null
+  
   let status: BhlItem['status'] = 'upcoming'
   if (remaining < 0) status = 'overdue'
   else if (remaining <= 14) status = 'warning'
@@ -52,6 +57,7 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
         .filter((e: Employee) => e.tanggal_masuk)
         .map((e: Employee) => {
           const bhl = calcBhl(e.tanggal_masuk!)
+          if (!bhl) return null
           return {
             id: e.id,
             nama: e.nama,
@@ -62,6 +68,7 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
             ...bhl,
           }
         })
+        .filter((item): item is BhlItem => item !== null)
       setData(items)
       setError('')
     } catch (e) {
@@ -89,8 +96,8 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
         <div>
           <h1>Monitor BHL</h1>
           <p className="page__desc">
-            Penilaian BHL (70 hari sejak tanggal masuk kerja). Karyawan yang mendekati atau melewati
-            batas 70 hari perlu segera dievaluasi.
+            Penilaian BHL (70 hari sejak tanggal masuk kerja). Menampilkan karyawan yang segera,
+            akan datang, atau terlambat (maksimal 1 bulan).
           </p>
         </div>
       </div>
@@ -193,7 +200,7 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
         </span>
         <span className="status-item">
           <span className="dot" style={{ background: 'var(--color-error)' }}></span>
-          Terlampaui = lewat 70 hari
+          Terlambat = lewat 70 hari (maks 30 hari)
         </span>
       </div>
     </main>
