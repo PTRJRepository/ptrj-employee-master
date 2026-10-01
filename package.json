@@ -1,0 +1,28 @@
+{
+  "name": "employee-master",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HRD Portal Informasi Karyawan Terpusat (PT Rebinmas Jaya) — manual master (Excel-seeded, editable) + db_ptrj read-only; Bun/Elysia API serving a Vite SPA in one process",
+  "scripts": {
+    "start": "node scripts/port-healer.cjs 8018 employee-master && bun src/index.ts",
+    "dev": "node scripts/port-healer.cjs 8018 employee-master && bun --hot src/index.ts",
+    "dev:web": "bun --cwd web dev",
+    "build": "bun run build:web",
+    "build:web": "bun --cwd web run build",
+    "typecheck": "tsc --noEmit && bun --cwd web run typecheck",
+    "schema": "bun scripts/schema.ts",
+    "seed": "bun scripts/seed.ts"
+  },
+  "dependencies": {
+    "elysia": "^1.4.13",
+    "mssql": "^11.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.8",
+    "@types/node": "^24.0.10",
+    "bun-types": "^1.3.14",
+    "typescript": "^5.8.3"
+  }
+}

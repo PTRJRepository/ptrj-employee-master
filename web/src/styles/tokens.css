@@ -1,0 +1,100 @@
+/* Hallmark · theme: Cobalt · tokens
+ * paper oklch(98.5% 0.004 250) · accent oklch(58% 0.20 256) electric cobalt
+ * display Space Grotesk · body Inter · mono JetBrains Mono
+ * Every colour and font in this build references these tokens by name.
+ */
+:root {
+  /* ── Surfaces (cool engineered paper, never #fff) ── */
+  --color-paper:     oklch(98.5% 0.004 250);
+  --color-paper-2:   oklch(96.9% 0.005 250);   /* hover rows, input fill */
+  --color-paper-3:   oklch(94.6% 0.006 251);   /* wells, disabled fill */
+  --color-rule:      oklch(90.5% 0.006 252);   /* hairlines */
+  --color-rule-2:    oklch(84.0% 0.008 252);   /* input borders */
+
+  /* ── Ink (cool charcoal, never #000) ── */
+  --color-ink:       oklch(24% 0.020 258);     /* headings */
+  --color-ink-2:     oklch(34% 0.018 257);     /* body */
+  --color-muted:     oklch(50% 0.016 256);     /* meta text (≥4.5:1 on paper) */
+  --color-neutral:   oklch(54% 0.013 255);     /* faint text, placeholders (≥4.5:1 on paper AND paper-2) */
+
+  /* ── The one signal ── */
+  --color-accent:      oklch(56% 0.20 256);    /* electric cobalt (L56: accent-ink ≥4.5:1) */
+  --color-accent-ink:  oklch(98.5% 0.01 256);  /* text ON accent fill */
+  --color-accent-soft: oklch(94.5% 0.035 256); /* active nav / chip tint */
+  --color-accent-deep: oklch(46% 0.17 256);    /* accent text on soft tint */
+
+  /* ── State colours ── */
+  --color-focus:    oklch(56% 0.20 256);
+  --color-error:    oklch(54% 0.19 25);
+  --color-error-soft: oklch(95% 0.03 25);
+  --color-error-ink:  oklch(44% 0.17 25);
+  --color-success:  oklch(55% 0.14 150);
+  --color-success-soft: oklch(95% 0.03 150);
+  --color-warn-soft: oklch(95% 0.04 85);
+
+  /* Overlays / elevation (lifted from app.css — gate 48 token discipline) */
+  --color-scrim:  oklch(24% 0.02 258 / 0.32);
+  --color-shadow: oklch(24% 0.02 258 / 0.18);
+  /* Accent for dark surfaces (toast actions): ≥4.5:1 on --color-graphite */
+  --color-accent-on-dark: oklch(72% 0.14 256);
+
+  /* ── The one dark beat (graphite band) ── */
+  --color-graphite:   oklch(22% 0.016 260);
+  --color-graphite-2: oklch(27% 0.016 260);
+  --color-graphite-rule: oklch(38% 0.015 260);
+  --color-graphite-ink:  oklch(93% 0.010 255);
+  --color-graphite-muted: oklch(68% 0.012 256);
+
+  /* ── Fonts (2+1: display + body + mono outlier) ── */
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body:    "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* ── Type scale (1.25 major third from 16px) ── */
+  --text-xs:    0.64rem;
+  --text-sm:    0.8rem;
+  --text-base:  1rem;
+  --text-md:    1.25rem;
+  --text-lg:    1.5625rem;
+  --text-xl:    1.9531rem;
+  --text-2xl:   2.4414rem;
+  --text-3xl:   3.0518rem;
+  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --text-stat:   clamp(3rem, 6vw + 1rem, 5.5rem);  /* hero figure (≤12ch, may reach 7rem cap) */
+
+  /* ── Spacing (4pt scale, named by role) ── */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+
+  /* ── Radii — drawn with a ruler ── */
+  --radius:     6px;
+  --radius-lg:  10px;
+  --radius-sm:  4px;
+
+  /* ── Motion ── */
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:      cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long:  420ms;
+
+  /* ── Z-index (six named levels) ── */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* ── Layout metrics ── */
+  --rail-w: 13.5rem;
+  --bar-h: 3.25rem;
+}
