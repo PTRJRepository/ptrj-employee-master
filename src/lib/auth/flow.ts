@@ -115,18 +115,18 @@ const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
 
   :root {
-    --bg: #f8f6f3;
-    --surface: #ffffff;
-    --surface-warm: #faf8f5;
-    --ink: #2c2c2c;
-    --ink-soft: #5a5a5a;
-    --ink-mute: #9a9a9a;
-    --line: #e8e4e0;
-    --line-strong: #d4d0cc;
-    --accent: #4a7c59;
-    --accent-deep: #3d6b4c;
-    --accent-soft: #e8f0ea;
-    --accent-warm: #8b6f47;
+    --bg: #faf7f0;
+    --surface: #fffdfa;
+    --surface-warm: #fdfaf3;
+    --ink: #22201c;
+    --ink-soft: #3f3b34;
+    --ink-mute: #736d61;
+    --line: #e6dfd1;
+    --line-strong: #d5cdb9;
+    --accent: #3f6b4a;
+    --accent-deep: #2f543a;
+    --accent-soft: #e7ede4;
+    --accent-warm: #7a5f3a;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
     --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
@@ -143,7 +143,7 @@ const PAGE_CSS = `
     grid-template-columns: 1.1fr 1fr;
     background: var(--bg);
     color: var(--ink);
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
     overflow-x: hidden;
   }
 
@@ -154,7 +154,7 @@ const PAGE_CSS = `
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    background: linear-gradient(160deg, #e8f0ea 0%, #d4e4d8 50%, #c8dcc8 100%);
+    background: linear-gradient(160deg, #e7ede4 0%, #d8e3d5 50%, #c9d6c4 100%);
     overflow: hidden;
   }
 
@@ -163,8 +163,8 @@ const PAGE_CSS = `
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(139,111,71,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(74,124,89,0.1) 0%, transparent 60%);
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(122,95,58,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(63,107,74,0.10) 0%, transparent 60%);
     pointer-events: none;
   }
 
@@ -216,7 +216,7 @@ const PAGE_CSS = `
   }
 
   .brand-hero h1 {
-    font-family: "Source Serif 4", Georgia, serif;
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
     font-size: clamp(40px, 4.5vw, 56px);
     font-weight: 600;
     line-height: 1.08;
@@ -501,7 +501,7 @@ export function loginPageHtml(): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#f8f6f3" />
+<meta name="theme-color" content="#faf7f0" />
 <title>Masuk — Portal Karyawan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

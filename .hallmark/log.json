@@ -1,5 +1,16 @@
 [
   {
+    "date": "2026-10-08",
+    "scope": "app",
+    "genre": "editorial",
+    "macrostructure": "Workbench (grid pages) + Stat-Led (Ringkasan)",
+    "theme": "custom",
+    "theme_axes": "light / classical-serif / chromatic-other (green H151)",
+    "vibe": "vintage ledger, warm paper, professional finance",
+    "enrichment": "none",
+    "brief": "employee-master HRD portal — Excel-like column matrix on all five pages, clickable group tabs, frozen columns, windowed rows"
+  },
+  {
     "date": "2026-09-30",
     "macrostructure": "Stat-Led",
     "theme": "Cobalt",

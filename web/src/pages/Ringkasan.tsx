@@ -5,9 +5,59 @@ import {
   actionLabel,
   FIELD_LABELS,
   nf,
+  type ChangeRow,
   type DashboardResponse,
   type MeResponse,
 } from '../api'
+import Sheet, { type SheetColumn, type SheetGroup } from '../components/Sheet'
+
+/* ── Two grid column models: division spread + the audit feed ────── */
+
+interface DivisionRow {
+  division: string
+  count: number
+  /** Share of the total, 0–100. */
+  share: number
+}
+
+const DIVISION_GROUPS: SheetGroup[] = [
+  { label: 'Divisi', keys: ['division'] },
+  { label: 'Jumlah', keys: ['count', 'share'] },
+]
+
+const DIVISION_COLUMNS: SheetColumn<DivisionRow>[] = [
+  { key: 'division', label: 'Divisi', group: 'Divisi', type: 'string', width: 200 },
+  { key: 'count', label: 'Karyawan', group: 'Jumlah', type: 'int', width: 130, align: 'end' },
+  { key: 'share', label: 'Porsi', group: 'Jumlah', type: 'int', width: 110, align: 'end',
+    render: (d) => `${d.share.toFixed(1)}%` },
+]
+
+const FEED_GROUPS: SheetGroup[] = [
+  { label: 'Peristiwa', keys: ['changed_at', 'changed_by', 'action'] },
+  { label: 'Sasaran', keys: ['employee_name', 'field'] },
+  { label: 'Nilai', keys: ['old_value', 'new_value'] },
+]
+
+const FEED_COLUMNS: SheetColumn<ChangeRow>[] = [
+  { key: 'changed_at', label: 'Waktu', group: 'Peristiwa', type: 'date', width: 150,
+    render: (c) => new Date(c.changed_at).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    }) },
+  { key: 'changed_by', label: 'Oleh', group: 'Peristiwa', type: 'string', width: 130 },
+  { key: 'action', label: 'Aksi', group: 'Peristiwa', type: 'string', width: 110,
+    render: (c) => (
+      <span className={`tag${c.action === 'create' ? ' tag--accent' : c.action === 'delete' ? ' tag--danger' : ''}`}>
+        {actionLabel(c.action)}
+      </span>
+    ) },
+  { key: 'employee_name', label: 'Karyawan', group: 'Sasaran', type: 'string', width: 190 },
+  { key: 'field', label: 'Field', group: 'Sasaran', type: 'string', width: 140,
+    render: (c) => (c.field ? FIELD_LABELS[c.field] ?? c.field : '–') },
+  { key: 'old_value', label: 'Nilai lama', group: 'Nilai', type: 'string', width: 170,
+    render: (c) => <span className="riwayat__old mono">{c.old_value ?? '–'}</span> },
+  { key: 'new_value', label: 'Nilai baru', group: 'Nilai', type: 'string', width: 170,
+    render: (c) => <span className="riwayat__new mono">{c.new_value ?? '–'}</span> },
+]
 
 /**
  * Ringkasan — the Stat-Led view. A giant REAL headcount figure paired with a
@@ -58,7 +108,16 @@ export default function Ringkasan({ me }: { me: MeResponse }) {
     return () => window.clearInterval(id)
   }, [])
 
-  const maxDivision = Math.max(1, ...(data?.byDivision.map((d) => d.count) ?? [1]))
+  // Share is derived here, never invented — it is count / total of the same payload.
+  const divisionRows: DivisionRow[] = (() => {
+    const rows = data?.byDivision ?? []
+    const sum = rows.reduce((n, d) => n + d.count, 0)
+    return rows.map((d) => ({
+      division: d.division,
+      count: d.count,
+      share: sum > 0 ? (d.count / sum) * 100 : 0,
+    }))
+  })()
 
   return (
     <main className="page">
@@ -114,82 +173,55 @@ export default function Ringkasan({ me }: { me: MeResponse }) {
         </div>
       </section>
 
-      <div className="dashgrid">
-        {/* Division bars */}
-        <section className="panel" aria-label="Sebaran per divisi">
-          <div className="panel__head">
-            <h2>Sebaran per divisi</h2>
-            <Link className="label-caps" to="/daftar">
-              lihat data →
-            </Link>
-          </div>
-          <div className="bars">
-            {(data?.byDivision ?? []).map((d) => (
-              <div className="bar" key={d.division}>
-                <span className="bar__name" title={d.division}>
-                  {d.division}
-                </span>
-                <span className="bar__track">
-                  <span
-                    className="bar__fill"
-                    style={{ width: `${Math.max(2, (d.count / maxDivision) * 100)}%` }}
-                  />
-                </span>
-                <span className="bar__n tnum">{nf.format(d.count)}</span>
-              </div>
-            ))}
-            {!data && (
-              <div className="bar">
-                <span className="skel" style={{ gridColumn: '1 / -1' }} />
-              </div>
-            )}
-          </div>
-        </section>
+      {/* Division spread. The bar is retained as the visual, but the figures
+          now sit in a real <table> so the totals are machine-readable. */}
+      <section className="panel" aria-label="Sebaran per divisi">
+        <div className="panel__head">
+          <h2>Sebaran per divisi</h2>
+          <Link className="label-caps" to="/daftar">
+            lihat data →
+          </Link>
+        </div>
+        <Sheet<DivisionRow>
+          ariaLabel="Sebaran karyawan per divisi"
+          columns={DIVISION_COLUMNS}
+          groups={DIVISION_GROUPS}
+          rows={divisionRows}
+          rowKey={(d) => d.division}
+          loading={!data}
+          height="22rem"
+          empty={<div className="empty"><p>Belum ada data divisi.</p></div>}
+        />
+      </section>
 
-        {/* Recent changes feed */}
-        <section className="panel" aria-label="Perubahan terbaru">
-          <div className="panel__head">
-            <h2>Perubahan terbaru</h2>
-            <Link className="label-caps" to="/riwayat">
-              semua riwayat →
-            </Link>
-          </div>
-          <div className="feed">
-            {(data?.recentChanges ?? []).map((c) => (
-              <div className="feed__item" key={c.id}>
-                <div className="feed__top">
-                  <span className="feed__who">{c.changed_by ?? '–'}</span>
-                  <span className="feed__what">
-                    {actionLabel(c.action)}{' '}
-                    {c.action === 'update' && c.field ? (
-                      <>
-                        <b>{FIELD_LABELS[c.field] ?? c.field}</b> {c.employee_name}
-                      </>
-                    ) : (
-                      <b>{c.employee_name}</b>
-                    )}
-                  </span>
-                  <span className="feed__when">{c.changed_at ? new Date(c.changed_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                </div>
-                {c.action === 'update' && (c.old_value || c.new_value) && (
-                  <span className="feed__delta">
-                    <s>{c.old_value ?? '–'}</s> → <b>{c.new_value ?? '–'}</b>
-                  </span>
-                )}
-              </div>
-            ))}
-            {data && (data.recentChanges?.length ?? 0) === 0 && (
-              <div className="empty">
-                <span className="empty__mark" aria-hidden="true">
-                  ✓
-                </span>
-                <p>Belum ada perubahan tercatat.</p>
-                <p>Setiap edit dari siapa pun akan muncul di sini.</p>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+      {/* Recent changes feed — grid with real headers instead of a prose list. */}
+      <section className="panel" aria-label="Perubahan terbaru">
+        <div className="panel__head">
+          <h2>Perubahan terbaru</h2>
+          <Link className="label-caps" to="/riwayat">
+            semua riwayat →
+          </Link>
+        </div>
+        <Sheet<ChangeRow>
+          ariaLabel="Perubahan terbaru"
+          columns={FEED_COLUMNS}
+          groups={FEED_GROUPS}
+          rows={data?.recentChanges ?? []}
+          rowKey={(c) => c.id}
+          frozenKeys={['changed_at']}
+          loading={!data}
+          height="22rem"
+          empty={
+            <div className="empty">
+              <span className="empty__mark" aria-hidden="true">
+                ✓
+              </span>
+              <p>Belum ada perubahan tercatat.</p>
+              <p>Setiap edit dari siapa pun akan muncul di sini.</p>
+            </div>
+          }
+        />
+      </section>
     </main>
   )
 }

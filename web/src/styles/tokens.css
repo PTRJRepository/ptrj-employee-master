@@ -1,66 +1,93 @@
-/* Hallmark · theme: Cobalt · tokens
- * paper #f8f6f3 · accent oklch(58% 0.20 256) electric cobalt
- * display Space Grotesk · body Inter · mono JetBrains Mono
+/* Hallmark · genre: workbench · macrostructure: Spreadsheet (grid) + Stat-Led (Ringkasan)
+ * theme: Ledger Workbench · design-system: design.md · designed-as-app
+ * paper #faf7f0 · accent #3f6b4a forest green · body Inter · mono JetBrains Mono
  * Every colour and font in this build references these tokens by name.
+ *
+ * 2026-10-08 — RESET for dense data work. The previous "Vintage Ledger" values were
+ * editorial: 34px rows, a serif page title, and pills inside grid cells meant a
+ * 900px viewport showed 16 rows and the eye had to fight decoration to read a
+ * number. A spreadsheet is a workbench, not a magazine.
+ *   --row-h      34px -> 26px   (16 rows -> ~28 rows per viewport)
+ *   --col-gutter 48px -> 44px
+ *   type scale retuned for UI density; serif demoted to brand/hero only
+ *   grid gains its own tokens (gridline, row-head, band, select)
+ * Colour values are unchanged: they already measure >=4.5:1 on paper.
  */
 :root {
-  /* ── Surfaces (cool engineered paper, never #fff) ── */
-  --color-paper:     #f8f6f3;
-  --color-paper-2:   #f0ede8;   /* hover rows, input fill */
-  --color-paper-3:   #e8e4e0;   /* wells, disabled fill */
-  --color-rule:      #e8e4e0;   /* hairlines */
-  --color-rule-2:    #d4d0cc;   /* input borders */
+  /* ── Surfaces (warm ledger paper, never #fff) ── */
+  --color-paper:     #faf7f0;   /* oklch(97.7% 0.0098  87.5) */
+  --color-paper-2:   #f2ede2;   /* oklch(94.7% 0.0156  86.4) — hover rows, input fill */
+  --color-paper-3:   #e9e3d6;   /* oklch(91.7% 0.0186  86.1) — wells, disabled fill */
+  --color-rule:       #e6dfd1;  /* oklch(90.5% 0.0203  84.6) — hairlines */
+  --color-rule-2:     #d5cdb9;  /* oklch(83.4% 0.0261  86.0) — decorative borders (th, row-num, tag) */
+  --color-border-control: #948662; /* oklch(60.9% 0.0407  84.1) — control borders, ≥3:1 (WCAG 1.4.11):
+                                    *   3.36:1 on paper · 3.08:1 on paper-2 — used by .input/.select/.btn */
 
-  /* ── Ink (cool charcoal, never #000) ── */
-  --color-ink:       #2c2c2c;     /* headings */
-  --color-ink-2:     #4a4a4a;     /* body */
-  --color-muted:     #6b6b6b;     /* meta text (≥4.5:1 on paper) */
-  --color-neutral:   #9a9a9a;     /* faint text, placeholders (≥4.5:1 on paper AND paper-2) */
+  /* ── Ink (warm charcoal, never #000) ── */
+  --color-ink:       #22201c;   /* oklch(24.4% 0.0080  84.6) — headings   15.20:1 */
+  --color-ink-2:     #3f3b34;   /* oklch(35.4% 0.0130  81.7) — body       10.40:1 */
+  --color-muted:     #6a655b;   /* oklch(50.8% 0.0167  84.6) — meta        5.41:1 */
+  --color-neutral:   #736d61;   /* oklch(53.7% 0.0197  84.6) — placeholders 4.80:1 */
 
-  /* ── The one signal ── */
-  --color-accent:      #4a7c59;    /* electric cobalt (L56: accent-ink ≥4.5:1) */
-  --color-accent-ink:  #ffffff;  /* text ON accent fill */
-  --color-accent-soft: #e8f0ea; /* active nav / chip tint */
-  --color-accent-deep: #3d6b4c;    /* accent text on soft tint */
+  /* ── The one signal (forest green, ≤5% of viewport) ── */
+  --color-accent:      #3f6b4a; /* oklch(48.6% 0.0722 151.0)  5.75:1 on paper */
+  --color-accent-ink:  #ffffff; /* text ON accent fill        6.15:1 */
+  --color-accent-soft: #e7ede4; /* oklch(93.9% 0.0136 134.9) — active nav / chip tint */
+  --color-accent-deep: #2f543a; /* oklch(41.0% 0.0612 152.5)  8.01:1 · 7.20:1 on accent-soft */
 
   /* ── State colours ── */
-  --color-focus:    #4a7c59;
-  --color-error:    #b91c1c;
-  --color-error-soft: #fef2f2;
-  --color-error-ink:  #7f1d1d;
-  --color-success:  #15803d;
+  --color-focus:        #3f6b4a;
+  --color-error:        #b91c1c; /* 6.05:1 on paper */
+  --color-error-soft:   #fdf3f0;
+  --color-error-ink:    #7f1d1d;
+  --color-success:      #15803d; /* 4.69:1 on paper */
   --color-success-soft: #f0fdf4;
-  --color-warn-soft: #fefce8;
+  --color-warn:         #b45309; /* 4.69:1 on paper — solid warn (statusbar dot) */
+  --color-warn-ink:     #854d0e; /* 6.62:1 on --color-warn-soft — warn tag text */
+  --color-warn-soft:    #fefce8;
 
-  /* Overlays / elevation (lifted from app.css — gate 48 token discipline) */
-  --color-scrim:  rgba(0,0,0,0.4);
-  --color-shadow: rgba(0,0,0,0.1);
-  /* Accent for dark surfaces (toast actions): ≥4.5:1 on --color-graphite */
+  /* Overlays / elevation (token discipline — no inline rgba in components) */
+  --color-scrim:  rgba(34, 32, 28, 0.45);
+  --color-shadow: rgba(34, 32, 28, 0.10);
+  /* Accent for dark surfaces (toast actions): 5.07:1 on --color-graphite */
   --color-accent-on-dark: #6b9e7e;
 
   /* ── The one dark beat (graphite band) ── */
-  --color-graphite:   #1f2937;
-  --color-graphite-2: #374151;
-  --color-graphite-rule: #4b5563;
-  --color-graphite-ink:  #f9fafb;
-  --color-graphite-muted: #9ca3af;
+  --color-graphite:       #1c2430; /* oklch(25.8% 0.0255 258.3) */
+  --color-graphite-2:     #2a3442;
+  --color-graphite-rule:  #3d4a5c;
+  --color-graphite-ink:   #f9fafb; /* 14.95:1 on graphite */
+  --color-graphite-muted: #9ca3af; /*  6.15:1 on graphite */
+
+  /* ── Grid surface tokens (the <Sheet> spreadsheet) ──────────────────
+   * A spreadsheet needs its own vocabulary: a visible cell gridline, a
+   * distinct row/column header fill, a banded stripe, and a selection. */
+  --color-grid:       #e6dfd1;  /* cell gridlines (1px, same weight as a rule) */
+  --color-grid-strong:#c9bfa6;  /* freeze boundary / header underline */
+  --color-rowhead:    #f2ede2;  /* gutter + header fill */
+  --color-band:       #f6f2e9;  /* alternating row stripe (very faint) */
+  --color-sel-row:    #eef2ea;  /* hovered / active row wash */
+  --color-sel-cell:   #dfe9db;  /* active cell fill */
 
   /* ── Fonts (2+1: display + body + mono outlier) ── */
-  --font-display: "Source Serif 4", Georgia, serif;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-body:    "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  /* ── Type scale (1.25 major third from 112px) ── */
-  --text-xs:    0.64rem;
-  --text-sm:    0.8rem;
-  --text-base:  1rem;
-  --text-md:    1.25rem;
-  --text-lg:    1.5625rem;
-  --text-xl:    1.9531rem;
-  --text-2xl:   2.4414rem;
-  --text-3xl:   3.0518rem;
-  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
-  --text-stat:   clamp(3rem, 6vw + 1rem, 5.5rem);  /* hero figure (≤12ch, may reach 7rem cap) */
+  /* ── Type scale (1.25 major third) — retuned for UI density.
+   * The previous --text-xs (10.24px) was below a comfortable grid size;
+   * the UI steps now sit at 11 / 12 / 13px where the work actually happens. ── */
+  --text-2xs:   0.625rem;  /* 10px — keyboard hints only */
+  --text-xs:    0.6875rem; /* 11px — grid headers, labels, meta */
+  --text-sm:    0.8125rem; /* 13px — grid cells, controls, body-small */
+  --text-base:  0.9375rem; /* 15px — body */
+  --text-md:    1.125rem;  /* 18px — section headings */
+  --text-lg:    1.375rem;  /* 22px — page title */
+  --text-xl:    1.75rem;
+  --text-2xl:   2.25rem;
+  --text-3xl:   2.75rem;
+  --text-display: clamp(2rem, 3.5vw + 1rem, 3.25rem);
+  --text-stat:    clamp(3rem, 6vw + 1rem, 5.5rem);  /* hero figure (≤12ch) */
 
   /* ── Spacing (4pt scale, named by role) ── */
   --space-3xs: 0.125rem;
@@ -73,10 +100,10 @@
   --space-2xl: 4rem;
   --space-3xl: 6rem;
 
-  /* ── Radii — drawn with a ruler ── */
-  --radius:     12px;
-  --radius-lg:  20px;
-  --radius-sm:  6px;
+  /* ── Radii — a ledger has corners, not pills ── */
+  --radius:     8px;
+  --radius-lg:  14px;
+  --radius-sm:  4px;
 
   /* ── Motion ── */
   --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
@@ -95,6 +122,14 @@
   --z-toast: 500;
 
   /* ── Layout metrics ── */
-  --rail-w: 13.5rem;
-  --bar-h: 3.25rem;
+  --rail-w: 12rem;
+  --bar-h: 2.75rem;
+
+  /* ── Grid metrics (shared <Sheet>, see design.md § Grid contract) ──
+   * --row-h MUST stay in lockstep with ROW_H in Sheet.tsx: the virtualiser
+   * positions spacer rows from that constant, so a mismatch desynchronises
+   * the scroll offset from the rendered rows. */
+  --row-h: 26px;
+  --row-h-head: 30px;
+  --col-gutter: 44px;
 }

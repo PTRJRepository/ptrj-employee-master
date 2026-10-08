@@ -54,6 +54,29 @@ export interface ChangeRow {
   changed_at: string
 }
 
+/** One column from GET /api/schema (see src/lib/employeeSchema.ts). */
+export interface SchemaColumn {
+  key: string
+  label: string
+  kind: 'string' | 'int' | 'money' | 'date'
+  group: string
+  align: 'start' | 'end'
+  width: number
+  editable: boolean
+  source: 'EMPLOYEE_MASTER' | 'audit'
+}
+
+export interface SchemaGroup {
+  label: string
+  keys: string[]
+}
+
+export interface SchemaResponse {
+  columns: SchemaColumn[]
+  groups: SchemaGroup[]
+  total: number
+}
+
 export interface Identity {
   userId: number | string
   name: string
@@ -163,6 +186,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   me: () => request<MeResponse>('/auth/me'),
   meta: () => request<MetaResponse>('/meta'),
+  /** Column model + grouping tabs for <Sheet>. Static; safe to fetch once. */
+  schema: () => request<SchemaResponse>('/schema'),
   dashboard: () => request<DashboardResponse>('/dashboard'),
   watermark: () => request<{ total: number; watermark: number }>('/employees/watermark'),
 

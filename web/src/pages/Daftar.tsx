@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   api,
@@ -9,11 +9,61 @@ import {
   type ListResponse,
   type MeResponse,
   type MetaResponse,
+  type SchemaColumn,
+  type SchemaGroup,
 } from '../api'
 import { toast } from '../toast'
 import EmployeeForm, { dirtyFields, EMPTY_DRAFT, toDraft, type Draft } from '../components/EmployeeForm'
+import Sheet, { type SheetColumn } from '../components/Sheet'
+import CardGrid, { type CardField } from '../components/CardGrid'
+import ViewBar, { DENSITY_H, type Density, type ViewMode } from '../components/ViewBar'
+import { usePersisted } from '../lib/prefs'
+import { downloadCsv, stampedName, toCsv } from '../lib/csv'
 
-const LIMIT = 50
+/**
+ * Rows fetched per page. The grid windows client-side, so a larger page means
+ * more of the table is reachable in one scroll without extra requests. The API
+ * clamps `limit` to 500 (intParam(query.limit, 50, 500) in src/routes/manual.ts),
+ * so 250 is comfortably inside the cap.
+ */
+const LIMIT = 250
+
+/** Coerce a grid edit to the type the column declares before it is PATCHed. */
+function coerceForPatch(kind: SchemaColumn['kind'], value: string): string | number | null {
+  if (kind === 'money' || kind === 'int') {
+    const digits = value.replace(/[^\d.-]/g, '')
+    if (digits === '' || digits === '-' || digits === '.') return null
+    const n = Number(digits)
+    return Number.isFinite(n) ? n : null
+  }
+  return value.trim() === '' ? null : value
+}
+
+/** Build the <Sheet> column model from the server schema, once. */
+function buildSheetColumns(schema: SchemaColumn[]): SheetColumn<Employee>[] {
+  return schema.map((c) => {
+    const base: SheetColumn<Employee> = {
+      key: c.key,
+      label: c.label,
+      group: c.group,
+      type: c.kind,
+      width: c.width,
+      align: c.align,
+      editable: c.editable,
+      source: c.source,
+      raw: (row) => (row as unknown as Record<string, string | number | null>)[c.key],
+    }
+    // Preserve the badges the old hand-written table rendered.
+    if (c.key === 'nama') {
+      base.render = (row: Employee) => <span className="cell-name">{row.nama}</span>
+    } else if (c.key === 'division') {
+      base.render = (row: Employee) => <span className="tag">{row.division}</span>
+    } else if (c.key === 'status') {
+      base.render = (row: Employee) => <span className="tag tag--muted">{row.status ?? '–'}</span>
+    }
+    return base
+  })
+}
 
 /* ── Add-employee modal ─────────────────────────────────────────── */
 function AddModal({
@@ -343,8 +393,17 @@ export default function Daftar({ me }: { me: MeResponse }) {
   const [selected, setSelected] = useState<Employee | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [flash, setFlash] = useState<Set<number>>(new Set())
-  const [editingCell, setEditingCell] = useState<{ rowId: number; field: string } | null>(null)
-  const [editValue, setEditValue] = useState('')
+  const [schema, setSchema] = useState<SchemaColumn[]>([])
+  const [schemaGroups, setSchemaGroups] = useState<SchemaGroup[]>([])
+
+  /* ── Working preferences (persisted; they belong to the operator) ── */
+  const [view, setView] = usePersisted<ViewMode>('daftar.view', 'tabel')
+  const [density, setDensity] = usePersisted<Density>('daftar.density', 'rapat')
+  const [hiddenArr, setHiddenArr] = usePersisted<string[]>('daftar.hidden', [])
+  const hidden = useMemo(() => new Set(hiddenArr), [hiddenArr])
+
+  /* ── Selection for bulk actions and export ── */
+  const [picked, setPicked] = useState<Set<string | number>>(new Set())
 
   // watermark bookkeeping for live updates
   const lastWm = useRef({ total: -1, watermark: -1 })
@@ -390,6 +449,17 @@ export default function Daftar({ me }: { me: MeResponse }) {
       )
   }, [])
 
+  // Column model for the grid. Fetched once; static on the server.
+  useEffect(() => {
+    api
+      .schema()
+      .then((s) => {
+        setSchema(s.columns)
+        setSchemaGroups(s.groups)
+      })
+      .catch(() => toast.error('Gagal memuat skema kolom. Grid ditampilkan sebagian.'))
+  }, [])
+
   useEffect(() => {
     setLoading(true)
     load()
@@ -428,28 +498,95 @@ export default function Daftar({ me }: { me: MeResponse }) {
     setPage(1)
   }
 
-  const startEdit = (rowId: number, field: string, currentValue: string) => {
-    setEditingCell({ rowId, field })
-    setEditValue(currentValue)
-  }
-
-  const saveEdit = async () => {
-    if (!editingCell) return
-    const { rowId, field } = editingCell
-    setEditingCell(null)
+  /** Commit one edited cell (inline grid edit). */
+  const saveCell = async (row: Employee, key: string, value: string) => {
+    const col = schema.find((c) => c.key === key)
+    if (!col || col.source === 'audit' || !col.editable) return
     try {
-      await api.updateEmployee(rowId, { [field]: editValue })
+      await api.updateEmployee(row.id, { [key]: coerceForPatch(col.kind, value) })
       load()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal menyimpan perubahan.')
     }
   }
 
-  const cancelEdit = () => {
-    setEditingCell(null)
+  const total = data?.total ?? 0
+  const items = data?.items ?? []
+
+  /* Columns actually shown: schema order minus the ones the operator hid.
+     Frozen keys are never hidden (the picker says so), so filter them out. */
+  const visibleColumns = useMemo(
+    () => buildSheetColumns(schema).filter((c) => !hidden.has(c.key)),
+    [schema, hidden],
+  )
+
+  /** Card body: the identity essentials first, the rest behind "expand". */
+  const CARD_MAIN: Array<[string, string]> = [
+    ['jabatan', 'Jabatan'],
+    ['division', 'Divisi'],
+    ['status', 'Status'],
+    ['tanggal_masuk', 'Tgl masuk'],
+    ['gaji_pokok', 'Gaji pokok'],
+  ]
+  const CARD_DETAIL: Array<[string, string]> = [
+    ['no_ktp', 'No. KTP'],
+    ['tempat_lahir', 'Tempat lahir'],
+    ['tanggal_lahir', 'Tgl lahir'],
+    ['agama', 'Agama'],
+    ['pendidikan', 'Pendidikan'],
+    ['no_rekening', 'No. rekening'],
+    ['no_bpjs_tk', 'No. BPJS TK'],
+    ['domisili', 'Domisili'],
+    ['alamat', 'Alamat'],
+    ['nama_suami_istri', 'Pasangan'],
+    ['nama_ibu', 'Nama ibu'],
+    ['nama_anak', 'Nama anak'],
+  ]
+  const idOf = (r: Employee) => r as unknown as Record<string, unknown>
+  const cardFields = (r: Employee): CardField[] => {
+    const src = idOf(r)
+    const shown = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(v))
+    const out: CardField[] = []
+    for (const [k, label] of CARD_MAIN) {
+      const raw = src[k]
+      if (raw === null || raw === undefined || raw === '') continue
+      out.push({
+        key: k,
+        label,
+        value: k === 'gaji_pokok' ? rupiah(raw as number) : k === 'tanggal_masuk' ? shortDate(String(raw)) : shown(raw),
+        numeric: k === 'gaji_pokok',
+        tone: k === 'division' ? 'accent' : k === 'status' ? 'muted' : 'plain',
+      })
+    }
+    for (const [k, label] of CARD_DETAIL) {
+      const v = shown(src[k])
+      if (!v) continue
+      out.push({
+        key: k,
+        label,
+        value: k === 'tanggal_lahir' ? shortDate(v) : v,
+        detail: true,
+      })
+    }
+    return out
   }
 
-  const total = data?.total ?? 0
+  /** Export the visible columns for the selected rows (or the whole page). */
+  const exportCsv = () => {
+    const chosen = picked.size ? items.filter((r) => picked.has(r.id)) : items
+    const cols = visibleColumns.map((c) => ({ key: c.key, label: c.label }))
+    downloadCsv(stampedName('data-manual'), toCsv(cols, chosen))
+  }
+
+  // A row deleted or filtered away must not linger in the selection count.
+  useEffect(() => {
+    const live = new Set<string | number>(items.map((r) => r.id))
+    setPicked((prev) => {
+      const next = new Set<string | number>([...prev].filter((k) => live.has(k)))
+      return next.size === prev.size ? prev : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
   const totalPages = data?.totalPages ?? 1
 
   return (
@@ -524,264 +661,87 @@ export default function Daftar({ me }: { me: MeResponse }) {
         </div>
       )}
 
-      <div className="tablewrap">
-        <table
-          className="data"
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              const rows = table.querySelectorAll('tbody tr')
-              const currentIdx = Array.from(rows).findIndex((r) => r === document.activeElement)
-              if (currentIdx !== -1) {
-                const nextIdx = e.key === 'ArrowDown' ? currentIdx + 1 : currentIdx - 1
-                if (nextIdx >= 0 && nextIdx < rows.length) {
-                  rows[nextIdx].focus()
-                }
-              }
-            }
-          }}
-        >
-          <thead>
-            <tr>
-              <th className="row-num">#</th>
-              <th style={{ width: '3.5rem' }}>No.</th>
-              <th>
-                <button type="button" onClick={() => toggleSort('nama')} aria-label="Urutkan nama">
-                  Nama {sort === 'nama' ? (dir === 'asc' ? '↑' : '↓') : ''}
-                </button>
-              </th>
-              <th>
-                <button type="button" onClick={() => toggleSort('division')} aria-label="Urutkan divisi">
-                  Divisi {sort === 'division' ? (dir === 'asc' ? '↑' : '↓') : ''}
-                </button>
-              </th>
-              <th>Status</th>
-              <th>JK</th>
-              <th>
-                <button type="button" onClick={() => toggleSort('tanggal_masuk')} aria-label="Urutkan tanggal masuk">
-                  Tgl masuk {sort === 'tanggal_masuk' ? (dir === 'asc' ? '↑' : '↓') : ''}
-                </button>
-              </th>
-              <th>No. KTP</th>
-              <th style={{ textAlign: 'end' }}>
-                <button type="button" onClick={() => toggleSort('gaji_pokok')} aria-label="Urutkan gaji pokok">
-                  Gaji pokok {sort === 'gaji_pokok' ? (dir === 'asc' ? '↑' : '↓') : ''}
-                </button>
-              </th>
-              <th>Domisili</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={`sk-${i}`}>
-                  <td colSpan={10}>
-                    <div className="skel" style={{ width: `${90 - i * 6}%` }} />
-                  </td>
-                </tr>
-              ))}
-            {!loading &&
-              (data?.items ?? []).map((row, idx) => (
-                <tr
-                  key={row.id}
-                  tabIndex={0}
-                  className={flash.has(row.id) ? 'flash' : undefined}
-                  onClick={() => setSelected(row)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setSelected(row)
-                    }
+      <ViewBar<Employee>
+        view={view}
+        onView={setView}
+        density={density}
+        onDensity={setDensity}
+        columns={buildSheetColumns(schema)}
+        groups={schemaGroups}
+        hidden={hidden}
+        onHidden={(next) => setHiddenArr([...next])}
+        onExport={exportCsv}
+        selectedCount={picked.size}
+        onClearSelection={() => setPicked(new Set())}
+      />
+
+      {view === 'tabel' ? (
+        <Sheet<Employee>
+          ariaLabel="Data manual karyawan"
+          columns={visibleColumns}
+          groups={schemaGroups}
+          rows={items}
+          rowKey={(r) => r.id}
+          // The two columns that identify a payroll row stay pinned while the
+          // remaining 27 scroll horizontally.
+          frozenKeys={['nama']}
+          rowNumberOffset={(page - 1) * LIMIT}
+          loading={loading}
+          flashKeys={flash}
+          sortKey={sort}
+          sortDir={dir}
+          onSort={toggleSort}
+          onRowOpen={(row) => setSelected(row)}
+          onCellCommit={saveCell}
+          rowHeight={DENSITY_H[density]}
+          selectable
+          selectedKeys={picked}
+          onSelectChange={setPicked}
+          empty={
+            <div className="empty">
+              <span className="empty__mark" aria-hidden="true">
+                ⌕
+              </span>
+              <p>Tidak ada karyawan yang cocok.</p>
+              <p>Ubah kata kunci atau filter divisi untuk memperluas pencarian.</p>
+              {(q || division || status || gender) && (
+                <button
+                  type="button"
+                  className="btn btn--sm"
+                  onClick={() => {
+                    setQuery('')
+                    setDivision('')
+                    setStatus('')
+                    setGender('')
                   }}
                 >
-                  <td className="row-num">{(page - 1) * LIMIT + idx + 1}</td>
-                  <td className="num">{row.no ?? '–'}</td>
-                  <td
-                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'nama' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'nama', row.nama)}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'nama' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <span className="cell-name">{row.nama}</span>
-                        {row.jabatan && <span className="cell-sub">{row.jabatan}</span>}
-                      </>
-                    )}
-                  </td>
-                  <td
-                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'division' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'division', row.division)}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'division' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <span className="tag">{row.division}</span>
-                        {row.sub_divisi && <span className="cell-sub">{row.sub_divisi}</span>}
-                      </>
-                    )}
-                  </td>
-                  <td
-                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'status' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'status', row.status ?? '')}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'status' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      <span className="tag tag--muted">{row.status ?? '–'}</span>
-                    )}
-                  </td>
-                  <td
-                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'gender' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'gender', row.gender ?? '')}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'gender' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      row.gender ?? '–'
-                    )}
-                  </td>
-                  <td
-                    className={`editable tnum${editingCell?.rowId === row.id && editingCell?.field === 'tanggal_masuk' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'tanggal_masuk', row.tanggal_masuk ?? '')}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'tanggal_masuk' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      shortDate(row.tanggal_masuk)
-                    )}
-                  </td>
-                  <td
-                    className={`editable mono${editingCell?.rowId === row.id && editingCell?.field === 'no_ktp' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'no_ktp', row.no_ktp ?? '')}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'no_ktp' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      row.no_ktp ?? '–'
-                    )}
-                  </td>
-                  <td
-                    className={`editable num${editingCell?.rowId === row.id && editingCell?.field === 'gaji_pokok' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'gaji_pokok', String(row.gaji_pokok ?? ''))}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'gaji_pokok' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      rupiah(row.gaji_pokok)
-                    )}
-                  </td>
-                  <td
-                    className={`editable${editingCell?.rowId === row.id && editingCell?.field === 'domisili' ? ' editing' : ''}`}
-                    onDoubleClick={() => startEdit(row.id, 'domisili', row.domisili ?? '')}
-                  >
-                    {editingCell?.rowId === row.id && editingCell?.field === 'domisili' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={saveEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                      />
-                    ) : (
-                      row.domisili ?? '–'
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        {!loading && (data?.items.length ?? 0) === 0 && (
-          <div className="empty">
-            <span className="empty__mark" aria-hidden="true">
-              ⌕
-            </span>
-            <p>Tidak ada karyawan yang cocok.</p>
-            <p>Ubah kata kunci atau filter divisi untuk memperluas pencarian.</p>
-            {(q || division || status || gender) && (
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={() => {
-                  setQuery('')
-                  setDivision('')
-                  setStatus('')
-                  setGender('')
-                }}
-              >
-                Bersihkan filter
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+                  Bersihkan filter
+                </button>
+              )}
+            </div>
+          }
+        />
+      ) : (
+        <CardGrid<Employee>
+          rows={items}
+          rowKey={(r) => r.id}
+          title={(r) => r.nama}
+          subtitle={(r) => r.jabatan ?? null}
+          fields={cardFields}
+          onOpen={(r) => setSelected(r)}
+          loading={loading}
+          flashKeys={flash}
+          selectable
+          selectedKeys={picked}
+          onSelectChange={setPicked}
+          empty={
+            <div className="empty">
+              <p>Tidak ada karyawan yang cocok.</p>
+              <p>Ubah kata kunci atau filter untuk memperluas pencarian.</p>
+            </div>
+          }
+        />
+      )}
 
       <div className="statusbar">
         <span className="status-item">

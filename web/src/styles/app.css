@@ -1,8 +1,9 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Stat-Led · theme: Cobalt
- * tone: utilitarian · enrichment: none (typography only)
- * nav: N13 search-pill bar + N3 side rail (app shell) · footer: Ft2 status strip
- * knobs: stat-hero figure=tabular-display, qualifier=below, secondary=4-up strip
- * audience=managers · use=find & update records · stamp date: 2026-09-30
+/* Hallmark · genre: editorial · macrostructure: Workbench (grid pages) + Stat-Led (Ringkasan)
+ * theme: Vintage Ledger · design-system: design.md · designed-as-app
+ * nav: N3 side rail (app shell) · footer: status strip
+ * enrichment: none (typography only) · motion: cut
+ * audience=HRD & managers · use=find, edit & reconcile employee records
+ * stamp date: 2026-10-08 (supersedes the 2026-09-30 modern-minimal/Cobalt stamp)
  */
 @import './tokens.css';
 
@@ -24,20 +25,23 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+/* A workbench names its screens in the working face, not a display serif.
+ * Source Serif 4 is now reserved for the brand wordmark and the one hero
+ * figure on Ringkasan — where it is a deliberate pin, not the default. */
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   color: var(--color-ink);
   font-style: normal; /* headers are roman — no italics */
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
   margin: 0;
 }
-h1 { font-weight: 600; }
-h2 { font-weight: 600; font-size: var(--text-lg); }
-h3 { font-weight: 500; font-size: var(--text-md); }
+h1 { font-weight: 650; }
+h2 { font-weight: 650; font-size: var(--text-md); }
+h3 { font-weight: 600; font-size: var(--text-base); }
 p { margin: 0; }
 a {
   color: var(--color-accent-deep);
@@ -87,65 +91,24 @@ textarea {
   border: 0;
 }
 
-/* ── Excel-like table ──────────────────────────────────────────── */
-.tablewrap {
-  border: 1px solid var(--color-rule-2);
-  border-radius: var(--radius-sm);
-  overflow: auto;
-  max-height: calc(100vh - 280px);
-  position: relative;
-}
-
-table.data {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-table.data thead {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-}
-
-table.data th {
-  padding: 10px 14px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-muted);
-  background: var(--color-paper-2);
-  border-bottom: 2px solid var(--color-rule-2);
-  white-space: nowrap;
-  user-select: none;
-}
-
-table.data td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--color-rule);
-  vertical-align: top;
-}
-
-table.data tbody tr {
-  transition: background-color 100ms ease;
-}
-
-table.data tbody tr:hover {
-  background: var(--color-paper-2);
-}
+/* ── Grid primitives ──────────────────────────────────────────────
+ * The base .tablewrap / table.data / th / td / tbody rules live in the
+ * "Data table (the work surface)" block below. This section holds only the
+ * Excel-like behaviours the grid adds on top of it. Every value here is a
+ * real token (see design.md): the earlier version referenced undefined
+ * tokens (--accent, --accent-soft, --surface) and silently rendered nothing.
+ * ──────────────────────────────────────────────────────────────── */
 
 table.data tbody tr.selected {
-  background: var(--accent-soft);
+  background: var(--color-accent-soft);
 }
 
 table.data tbody tr.flash {
-  animation: flash 1.7s ease-out;
+  animation: flash 1.7s var(--ease-out);
 }
 
 @keyframes flash {
-  0% { background: var(--accent-soft); }
+  0% { background: var(--color-accent-soft); }
   100% { background: transparent; }
 }
 
@@ -156,13 +119,13 @@ table.data td.editable {
 }
 
 table.data td.editable:hover {
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 table.data td.editing {
   padding: 0;
-  background: var(--surface);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--color-paper);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 table.data td.editing input {
@@ -176,22 +139,30 @@ table.data td.editing input {
   outline: none;
 }
 
-/* Row number column like Excel */
+/* Row number column like Excel — frozen left so it survives horizontal scroll */
 table.data td.row-num,
 table.data th.row-num {
-  width: 48px;
-  min-width: 48px;
-  max-width: 48px;
+  width: var(--col-gutter);
+  min-width: var(--col-gutter);
+  max-width: var(--col-gutter);
   text-align: center;
-  color: var(--color-neutral);
+  color: var(--color-muted);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   background: var(--color-paper-2);
   border-right: 1px solid var(--color-rule-2);
   user-select: none;
+  position: sticky;
+  left: 0;
+  z-index: var(--z-base);
+}
+table.data th.row-num {
+  z-index: var(--z-raised);
 }
 
-/* Column resize handle */
+/* Column resize handle — the drag handler lands with <Sheet> (Phase 2).
+ * cursor stays `default` until the handle is actually draggable: a col-resize
+ * cursor with no handler is a false affordance. Flip to col-resize in Phase 2. */
 table.data th {
   position: relative;
 }
@@ -203,24 +174,705 @@ table.data th::after {
   top: 0;
   bottom: 0;
   width: 4px;
-  cursor: col-resize;
+  cursor: default;
   background: transparent;
 }
 
 table.data th:hover::after {
-  background: var(--accent);
+  background: var(--color-accent);
   opacity: 0.3;
 }
 
-/* Status bar */
+/* ── Sheet — the spreadsheet grid ─────────────────────────────────
+ * A workbench, not a presentation table: real cell gridlines, a frozen
+ * row/column header, frozen data columns, banded rows, and numbers set in
+ * tabular figures so decimal points line up down a column.
+ *
+ * The grid deliberately does NOT reuse `table.data` (the legacy marketing
+ * table style): that one pads cells for prose, which fights a 26px row.
+ * ──────────────────────────────────────────────────────────────── */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* Group tab strip — the only chrome around the grid. */
+.sheet__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+.sheet__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 1.75rem;
+  padding: 0 var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap; /* gate 49 */
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+.sheet__tab:hover {
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+}
+.sheet__tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.sheet__tab--on {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-weight: 600;
+}
+.sheet__tab-n {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-neutral);
+  font-variant-numeric: tabular-nums;
+}
+.sheet__tab--on .sheet__tab-n {
+  color: var(--color-accent-deep);
+}
+.sheet__tab--clear {
+  margin-left: auto;
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The scroll owner. A DEFINITE height is required for the window maths. */
+.sheet__wrap {
+  max-height: none;
+  overflow: auto;
+  border: 1px solid var(--color-grid-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  /* A spreadsheet is read at a glance; smooth scrolling blurs dense rows. */
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
+}
+.sheet__wrap:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -1px;
+}
+
+/* border-collapse:separate keeps the 1px gridlines from doubling up, and is
+ * what lets position:sticky work on th/td at all. */
+table.sheet__table {
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  background: var(--color-paper);
+}
+
+/* ── Header row ── */
+table.sheet__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  height: var(--row-h-head);
+  padding: 0 var(--space-xs);
+  background: var(--color-rowhead);
+  /* The 2px underline is the freeze line — where the header ends and data begins. */
+  border-bottom: 1px solid var(--color-grid-strong);
+  border-right: 1px solid var(--color-grid);
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+/* ── Body cells ── */
+table.sheet__table tbody td {
+  height: var(--row-h);
+  padding: 0 var(--space-xs);
+  border-bottom: 1px solid var(--color-grid);
+  border-right: 1px solid var(--color-grid);
+  color: var(--color-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  max-width: none;
+}
+
+/* Numbers: right-aligned, tabular, so digits line up column-wise. */
+table.sheet__table td.sheet__num,
+table.sheet__table th.sheet__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Frozen panes ──
+ * The gutter is the leftmost column and always sticks; frozen DATA columns
+ * follow it (Sheet.tsx hoists them so `left` counts only frozen widths). */
+table.sheet__table th.sheet__rownum,
+table.sheet__table td.sheet__rownum {
+  position: sticky;
+  left: 0;
+  width: var(--col-gutter);
+  min-width: var(--col-gutter);
+  max-width: var(--col-gutter);
+  padding: 0;
+  text-align: center;
+  background: var(--color-rowhead);
+  color: var(--color-neutral);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--color-grid-strong);
+  cursor: default;
+  user-select: none;
+}
+table.sheet__table td.sheet__rownum {
+  z-index: var(--z-base);
+  color: var(--color-neutral);
+}
+table.sheet__table th.sheet__rownum {
+  /* Corner cell: frozen both ways, on top of everything. */
+  z-index: calc(var(--z-raised) + 1);
+  top: 0;
+}
+
+table.sheet__table th.sheet__frozen,
+table.sheet__table td.sheet__frozen {
+  position: sticky;
+  background: var(--color-paper);
+  /* The right edge of the last frozen column is the freeze boundary. */
+  border-right: 1px solid var(--color-grid-strong);
+  z-index: var(--z-base);
+}
+table.sheet__table th.sheet__frozen {
+  background: var(--color-rowhead);
+  z-index: var(--z-raised);
+}
+
+/* ── Selection column: narrow, centred, never scrolls away ── */
+table.sheet__table th.sheet__select,
+table.sheet__table td.sheet__select {
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  padding: 0;
+  text-align: center;
+  background: var(--color-rowhead);
+  border-right: 1px solid var(--color-grid);
+}
+table.sheet__table td.sheet__select {
+  background: var(--color-paper);
+}
+table.sheet__table tbody tr.is-picked td {
+  background: var(--color-accent-soft);
+}
+table.sheet__table tbody tr.is-picked td.sheet__rownum,
+table.sheet__table tbody tr.is-picked td.sheet__frozen,
+table.sheet__table tbody tr.is-picked td.sheet__select {
+  background: var(--color-accent-soft);
+}
+table.sheet__table tbody tr.is-picked td.sheet__rownum {
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
+  color: var(--color-accent-deep);
+  font-weight: 600;
+}
+
+.sheet__check {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.sheet__check:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* ── Rows: banding, hover, focus, change-flash ──
+ * Banding is keyed to the absolute data index, so windowing cannot shift it. */
+table.sheet__table tbody tr.sheet__row--band td {
+  background: var(--color-band);
+}
+table.sheet__table tbody tr.sheet__row--band td.sheet__frozen,
+table.sheet__table tbody tr.sheet__row--band td.sheet__rownum {
+  background: var(--color-band);
+}
+table.sheet__table tbody tr:hover td {
+  background: var(--color-sel-row);
+}
+table.sheet__table tbody tr.sheet__row--on td {
+  background: var(--color-sel-row);
+}
+/* Focus bar on the left edge of the gutter — reads without moving the row. */
+table.sheet__table tbody tr.sheet__row--on td.sheet__rownum {
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
+  color: var(--color-accent-deep);
+  font-weight: 600;
+}
+
+@keyframes sheet-flash {
+  from { background-color: var(--color-accent-soft); }
+  to { background-color: transparent; }
+}
+table.sheet__table tbody tr.sheet__row--flash td {
+  animation: sheet-flash 1.6s var(--ease-out);
+}
+table.sheet__table tbody tr.sheet__row--flash td.sheet__frozen,
+table.sheet__table tbody tr.sheet__row--flash td.sheet__rownum {
+  animation: sheet-flash 1.6s var(--ease-out);
+}
+
+/* ── Selection + group highlight ── */
+table.sheet__table td.sheet__cell--active {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  background: var(--color-sel-cell);
+}
+table.sheet__table th.sheet__col--active {
+  background: var(--color-paper-3);
+  color: var(--color-ink);
+}
+/* Active group: a hairline under the header keeps the block findable. */
+table.sheet__table th.sheet__col--on {
+  box-shadow: inset 0 -2px 0 0 var(--color-accent);
+  color: var(--color-accent-deep);
+}
+
+/* ── Editable cells ── */
+table.sheet__table td.is-editable {
+  cursor: cell;
+}
+table.sheet__table td.is-editing {
+  padding: 0;
+}
+
+/* Inline editor fills the cell so the row height never jumps. */
+.sheet__editor {
+  display: block;
+  width: 100%;
+  height: calc(var(--row-h) - 1px);
+  padding: 0 var(--space-xs);
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  background: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  text-align: inherit;
+  outline: none;
+}
+
+/* ── Spacer + skeleton rows carry height only, never paint ── */
+table.sheet__table tbody tr.sheet__spacer td,
+table.sheet__table tbody tr.sheet__skel td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+table.sheet__table tbody tr.sheet__skel td {
+  height: var(--row-h);
+}
+.sheet__skel-bar {
+  display: block;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+  animation: sheet-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sheet-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Sortable header ── */
+.sheet__sort {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  cursor: pointer;
+  white-space: nowrap; /* gate 49 */
+}
+.sheet__sort:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.sheet__sort-mark {
+  color: var(--color-accent);
+  font-weight: 700;
+  /* Reserve the glyph slot so a sorted header cannot shift its column. */
+  min-width: 0.6em;
+}
+
+/* ── ViewBar — view / density / columns / export ─────────────────── */
+.viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Segmented control */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+}
+.segmented__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px var(--space-sm);
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 550;
+  white-space: nowrap; /* gate 49 */
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+.segmented__btn:hover {
+  color: var(--color-ink-2);
+}
+.segmented__btn--on {
+  background: var(--color-paper);
+  color: var(--color-accent-deep);
+  box-shadow: 0 1px 2px var(--color-shadow);
+}
+.segmented__btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -1px;
+}
+.segmented__ico {
+  font-size: var(--text-2xs);
+  line-height: 1;
+}
+
+/* Column-picker popover */
+.viewbar__pop {
+  position: relative;
+}
+.viewbar__n {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--color-paper-3);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.viewbar__sel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-size: var(--text-xs);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.viewbar__link {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.colpop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  width: min(34rem, calc(100vw - 2rem));
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  box-shadow: 0 2px 4px var(--color-shadow), 0 16px 40px -16px var(--color-shadow);
+}
+.colpop__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-grid);
+  font-size: var(--text-sm);
+}
+.colpop__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-xs) var(--space-md);
+  max-height: 22rem;
+  overflow: auto;
+  padding: var(--space-sm);
+}
+.colpop__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.colpop__group legend {
+  padding: 0 0 var(--space-2xs);
+  color: var(--color-muted);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.colpop__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 1px 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.colpop__item:hover {
+  color: var(--color-ink);
+}
+.colpop__note {
+  padding: var(--space-xs) var(--space-sm);
+  border-top: 1px solid var(--color-grid);
+  color: var(--color-neutral);
+  font-size: var(--text-2xs);
+}
+
+/* ── Card view — the same rows as <Sheet>, as a scannable wall ─────
+ * Card view exists for reading ONE record easily; the grid exists for
+ * comparing one column across many. They share rows, selection and edit
+ * handlers, so switching between them preserves state.
+ * ──────────────────────────────────────────────────────────────── */
+.cards {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.cards__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: var(--space-sm);
+  padding-block: var(--space-2xs);
+}
+.cards__more {
+  padding: var(--space-sm) 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  transition: border-color var(--dur-micro) var(--ease-out),
+    box-shadow var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+.card:hover {
+  border-color: var(--color-border-control);
+  box-shadow: 0 1px 2px var(--color-shadow), 0 8px 20px -12px var(--color-shadow);
+  transform: translateY(-1px);
+}
+.card.is-picked {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+.card.is-flash {
+  animation: card-flash 1.6s var(--ease-out);
+}
+@keyframes card-flash {
+  from { box-shadow: 0 0 0 3px var(--color-accent-soft); }
+  to { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ── Card head: monogram + identity ── */
+.card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+/* The hue is the scan aid — at 22% saturation it was invisible, so every card
+ * looked identical. Saturation is raised and lightness lowered until the
+ * colour actually reads, while staying dark enough for AA text. */
+.card__mono {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: hsl(var(--card-hue) 45% 87%);
+  color: hsl(var(--card-hue) 40% 24%);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.card__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.card__name {
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card__sub {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Card body: a compact definition list, two columns where it fits ── */
+.card__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 2px var(--space-sm);
+  margin: 0;
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--color-grid);
+}
+.card__body--extra {
+  border-top-style: dashed;
+}
+.card__row {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.card__row dt {
+  color: var(--color-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.card__row dd {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Card footer actions ── */
+.card__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-top: auto;
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--color-grid);
+}
+.card__act {
+  padding: 2px var(--space-xs);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-deep);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+.card__act:hover {
+  background: var(--color-accent-soft);
+}
+.card__act:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.card--skel {
+  gap: var(--space-xs);
+  pointer-events: none;
+}
+.card--skel .sheet__skel-bar {
+  height: 10px;
+}
+
+/* BHL overdue countdown. Colour only — the cell stays single-line. */
+.bhl__late {
+  color: var(--color-error);
+  font-weight: 500;
+}
+
+/* Audit delta: the superseded value reads as past, the new one as current.
+ * Colours only — the cells stay single-line for the virtualizer. */
+.riwayat__old {
+  color: var(--color-neutral);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-rule-2);
+}
+.riwayat__new {
+  color: var(--color-accent-deep);
+  font-weight: 500;
+}
+
+/* Status bar — the strip under the grid. Kept shallow so the table keeps the
+ * viewport; it carries counts and shortcuts, not prose. */
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
   background: var(--color-paper-2);
   border-top: 1px solid var(--color-rule);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--color-muted);
 }
 
@@ -234,21 +886,21 @@ table.data th:hover::after {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--success);
+  background: var(--color-success);
 }
 
 .statusbar .status-item .dot.warning {
-  background: var(--warn);
+  background: var(--color-warn);
 }
 
-/* Context menu */
+/* Context menu — reserved for <Sheet>'s row menu (Phase 2) */
 .context-menu {
   position: fixed;
   z-index: var(--z-dropdown);
-  background: var(--surface);
+  background: var(--color-paper);
   border: 1px solid var(--color-rule-2);
   border-radius: var(--radius-sm);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 40px var(--color-shadow);
   padding: 4px;
   min-width: 180px;
 }
@@ -259,10 +911,10 @@ table.data th:hover::after {
   gap: 10px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-ink-2);
   cursor: pointer;
-  transition: background-color 100ms ease;
+  transition: background-color var(--dur-micro) var(--ease-out);
 }
 
 .context-menu .menu-item:hover {
@@ -270,7 +922,7 @@ table.data th:hover::after {
 }
 
 .context-menu .menu-item.danger {
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .context-menu .menu-divider {
@@ -516,14 +1168,15 @@ table.data th:hover::after {
   flex-wrap: wrap;
 }
 .page__head h1 {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   overflow-wrap: anywhere;
   min-width: 0;
 }
 .page__desc {
   color: var(--color-muted);
   font-size: var(--text-sm);
-  max-width: 65ch;
+  max-width: 78ch;
+  margin-top: var(--space-2xs);
 }
 
 /* ── Stat hero (Stat-Led macrostructure) ──────────────────────── */
@@ -719,7 +1372,7 @@ table.data th:hover::after {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 .toolbar__count {
   font-family: var(--font-mono);
@@ -727,6 +1380,7 @@ table.data th:hover::after {
   color: var(--color-muted);
   margin-inline-start: auto;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Buttons — 8 states ───────────────────────────────────────── */
@@ -737,7 +1391,7 @@ table.data th:hover::after {
   gap: var(--space-xs);
   min-height: 2.25rem;
   padding-inline: var(--space-md);
-  border: 1px solid var(--color-rule-2);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius);
   background: var(--color-paper);
   color: var(--color-ink-2);
@@ -842,7 +1496,7 @@ table.data th:hover::after {
   height: 2.25rem; /* = button height */
   width: 100%;
   padding-inline: var(--space-sm);
-  border: 1px solid var(--color-rule-2); /* 1px in EVERY state */
+  border: 1px solid var(--color-border-control); /* 1px in EVERY state */
   border-radius: var(--radius);
   background: var(--color-paper);
   outline: 2px solid transparent; /* reserved focus slot — no shift */
@@ -958,45 +1612,58 @@ table.data td.num {
   white-space: nowrap;
 }
 .cell-name {
-  font-weight: 600;
+  font-weight: 550;
   color: var(--color-ink);
 }
+/* Inside a grid cell the secondary line cannot stack — the row is single-line.
+ * It becomes a muted inline suffix instead of a second baseline. */
 .cell-sub {
-  display: block;
   font-size: var(--text-xs);
   color: var(--color-muted);
   font-weight: 400;
 }
+table.sheet__table .cell-sub {
+  margin-left: var(--space-2xs);
+}
+/* Status token. Deliberately NOT a pill: a bordered, rounded chip in every
+ * cell of two or three columns turns a 30-row grid into a field of boxes and
+ * the numbers stop being findable. This is a typographic badge — small caps,
+ * letter-spaced, colour-banded — which stays inside a 26px row. */
 .tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  padding: 1px 7px;
-  border: 1px solid var(--color-rule-2);
-  border-radius: var(--radius-sm);
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--color-paper-3);
   color: var(--color-ink-2);
-  background: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.5;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: baseline;
 }
 .tag--accent {
-  border-color: var(--color-accent);
-  color: var(--color-accent-deep);
   background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
 }
 .tag--muted {
+  background: transparent;
   color: var(--color-muted);
+  padding: 0;
 }
 .tag--danger {
-  border-color: var(--color-error);
-  color: var(--color-error-ink);
   background: var(--color-error-soft);
+  color: var(--color-error-ink);
 }
 .tag--warn {
-  border-color: var(--color-warn-soft);
-  color: #854d0e;
   background: var(--color-warn-soft);
+  color: var(--color-warn-ink);
 }
 /* changed-cell flash (live update) */
 .flash {

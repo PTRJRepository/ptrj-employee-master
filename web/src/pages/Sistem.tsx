@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api,
@@ -9,8 +9,18 @@ import {
   type SistemEmployee,
   type SistemFamily,
 } from '../api'
+import Sheet, { type SheetColumn, type SheetGroup } from '../components/Sheet'
+import CardGrid, { type CardField } from '../components/CardGrid'
+import ViewBar, { DENSITY_H, type Density, type ViewMode } from '../components/ViewBar'
+import { usePersisted } from '../lib/prefs'
+import { downloadCsv, stampedName, toCsv } from '../lib/csv'
 
-const LIMIT = 50
+/**
+ * Rows per page. The API clamps `limit` to 500 (intParam(query.limit, 50, 500)
+ * in src/routes/sistem.ts); the grid windows client-side so a larger page just
+ * means more of the table is reachable in one scroll.
+ */
+const LIMIT = 250
 
 const REL_LABELS: Record<string, string> = {
   '1': 'Suami / istri',
@@ -18,6 +28,60 @@ const REL_LABELS: Record<string, string> = {
   '3': 'Keluarga lain',
   '7': 'Tanggungan lain',
 }
+
+/* ── Grid column model ─────────────────────────────────────────────
+ * Mirrors what /api/sistem/employees actually SELECTs. GangCode is
+ * declared on SistemEmployee but NOT selected by the query, so it is
+ * deliberately absent here (a column would render as '–' always).
+ * ───────────────────────────────────────────────────────────────── */
+const SISTEM_GROUPS: SheetGroup[] = [
+  { label: 'Identitas', keys: ['EmpName', 'NewICNo', 'Gender', 'DOB', 'PlaceOfBirth', 'Religion', 'MaritalStatus'] },
+  { label: 'Kontak', keys: ['MobileTel', 'ResAddress'] },
+  { label: 'Kepegawaian', keys: ['emp_code', 'Status', 'HREmpType', 'AppJoinDate', 'TerminateDate'] },
+  { label: 'Organisasi', keys: ['DeptCode', 'PosCode', 'LocCode', 'LevelCode', 'SalSchemeCode', 'SalGradeCode', 'is_active'] },
+]
+
+const SISTEM_COLUMNS: SheetColumn<SistemEmployee>[] = [
+  { key: 'EmpName', label: 'Nama', group: 'Identitas', type: 'string', width: 220,
+    render: (r) => <span className="cell-name">{String(r.EmpName).trim()}</span> },
+  { key: 'NewICNo', label: 'No. KTP', group: 'Identitas', type: 'string', width: 170 },
+  { key: 'Gender', label: 'JK', group: 'Identitas', type: 'string', width: 70,
+    render: (r) => r.gender_label || r.Gender },
+  { key: 'DOB', label: 'Tgl lahir', group: 'Identitas', type: 'date', width: 120 },
+  { key: 'PlaceOfBirth', label: 'Tempat lahir', group: 'Identitas', type: 'string', width: 150 },
+  { key: 'Religion', label: 'Agama', group: 'Identitas', type: 'string', width: 110 },
+  { key: 'MaritalStatus', label: 'Status kawin', group: 'Identitas', type: 'string', width: 110 },
+
+  { key: 'MobileTel', label: 'Telepon', group: 'Kontak', type: 'string', width: 140 },
+  { key: 'ResAddress', label: 'Alamat', group: 'Kontak', type: 'string', width: 260 },
+
+  { key: 'emp_code', label: 'Kode', group: 'Kepegawaian', type: 'string', width: 110,
+    render: (r) => <span className="mono">{r.emp_code}</span> },
+  { key: 'Status', label: 'Status HR', group: 'Kepegawaian', type: 'string', width: 110 },
+  { key: 'HREmpType', label: 'Tipe', group: 'Kepegawaian', type: 'string', width: 100 },
+  { key: 'AppJoinDate', label: 'Tgl masuk', group: 'Kepegawaian', type: 'date', width: 120 },
+  { key: 'TerminateDate', label: 'Tgl berhenti', group: 'Kepegawaian', type: 'date', width: 120 },
+
+  { key: 'DeptCode', label: 'Dept', group: 'Organisasi', type: 'string', width: 180,
+    render: (r) => (
+      <>
+        <span className="tag">{r.DeptCode ?? '–'}</span>
+        {r.dept_name && <span className="cell-sub">{String(r.dept_name).trim()}</span>}
+      </>
+    ) },
+  { key: 'PosCode', label: 'Jabatan', group: 'Organisasi', type: 'string', width: 180,
+    render: (r) => (r.pos_name ? String(r.pos_name).trim() : r.PosCode ?? '–') },
+  { key: 'LocCode', label: 'Lokasi', group: 'Organisasi', type: 'string', width: 100 },
+  { key: 'LevelCode', label: 'Level', group: 'Organisasi', type: 'string', width: 90 },
+  { key: 'SalSchemeCode', label: 'Skema gaji', group: 'Organisasi', type: 'string', width: 110 },
+  { key: 'SalGradeCode', label: 'Golongan', group: 'Organisasi', type: 'string', width: 110 },
+  { key: 'is_active', label: 'Aktif', group: 'Organisasi', type: 'int', width: 110,
+    render: (r) => (
+      <span className={`tag${r.is_active ? ' tag--accent' : ' tag--muted'}`}>
+        {r.is_active ? 'aktif' : 'tidak aktif'}
+      </span>
+    ) },
+]
 
 /* ── Read-only detail popup ────────────────────────────────────── */
 function SistemPopup({ code, onClose }: { code: string; onClose: () => void }) {
@@ -157,6 +221,13 @@ export default function Sistem() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
+  /* ── Working preferences ── */
+  const [view, setView] = usePersisted<ViewMode>('sistem.view', 'tabel')
+  const [density, setDensity] = usePersisted<Density>('sistem.density', 'rapat')
+  const [hiddenArr, setHiddenArr] = usePersisted<string[]>('sistem.hidden', [])
+  const hidden = useMemo(() => new Set(hiddenArr), [hiddenArr])
+  const [picked, setPicked] = useState<Set<string | number>>(new Set())
+
   const loadSeq = useRef(0)
 
   const load = useCallback(async () => {
@@ -185,6 +256,63 @@ export default function Sistem() {
   }, [load, q])
 
   const total = data?.total ?? 0
+  const items = data?.items ?? []
+
+  const visibleColumns = useMemo(
+    () => SISTEM_COLUMNS.filter((c) => !hidden.has(c.key)),
+    [hidden],
+  )
+
+  const cardFields = (row: SistemEmployee): CardField[] => {
+    // MaritalStatus / SalSchemeCode / SalGradeCode are SELECTed by the query but
+    // absent from SistemEmployee, so read them through the record shape rather
+    // than widening the shared API type for three display-only fields.
+    const r = row as unknown as Record<string, unknown>
+    const s = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(v).trim())
+    const out: CardField[] = []
+    const push = (key: string, label: string, value: string, opts: Partial<CardField> = {}) => {
+      if (value) out.push({ key, label, value, ...opts })
+    }
+    push('emp_code', 'Kode', s(row.emp_code), { tone: 'accent' })
+    push('DeptCode', 'Dept', s(row.dept_name) || s(row.DeptCode))
+    push('PosCode', 'Jabatan', s(row.pos_name) || s(row.PosCode))
+    push('Status', 'Status HR', s(row.Status))
+    push('AppJoinDate', 'Tgl masuk', shortDate(row.AppJoinDate), { numeric: true })
+    push('is_active', 'Aktif', row.is_active ? 'aktif' : 'tidak aktif', {
+      tone: row.is_active ? 'accent' : 'muted',
+    })
+    push('NewICNo', 'No. KTP', s(r.NewICNo), { numeric: true, detail: true })
+    push('gender_label', 'JK', s(r.gender_label) || s(r.Gender), { detail: true })
+    push('DOB', 'Tgl lahir', shortDate(row.DOB), { detail: true, numeric: true })
+    push('PlaceOfBirth', 'Tempat lahir', s(r.PlaceOfBirth), { detail: true })
+    push('Religion', 'Agama', s(r.Religion), { detail: true })
+    push('MaritalStatus', 'Status kawin', s(r.MaritalStatus), { detail: true })
+    push('MobileTel', 'Telepon', s(r.MobileTel), { detail: true, numeric: true })
+    push('ResAddress', 'Alamat', s(r.ResAddress), { detail: true })
+    push('LocCode', 'Lokasi', s(r.LocCode), { detail: true })
+    push('LevelCode', 'Level', s(r.LevelCode), { detail: true })
+    push('SalSchemeCode', 'Skema gaji', s(r.SalSchemeCode), { detail: true })
+    push('SalGradeCode', 'Golongan', s(r.SalGradeCode), { detail: true })
+    push('TerminateDate', 'Tgl berhenti', shortDate(row.TerminateDate), { detail: true, numeric: true })
+    return out
+  }
+
+  const exportCsv = () => {
+    const chosen = picked.size ? items.filter((r) => picked.has(r.emp_code)) : items
+    downloadCsv(
+      stampedName('data-sistem'),
+      toCsv(visibleColumns.map((c) => ({ key: c.key, label: c.label })), chosen),
+    )
+  }
+
+  useEffect(() => {
+    const live = new Set<string | number>(items.map((r) => r.emp_code))
+    setPicked((prev) => {
+      const next = new Set<string | number>([...prev].filter((k) => live.has(k)))
+      return next.size === prev.size ? prev : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
   const totalPages = data?.totalPages ?? 1
 
   return (
@@ -242,85 +370,80 @@ export default function Sistem() {
         </div>
       )}
 
-      <div className="tablewrap">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Nama</th>
-              <th>JK</th>
-              <th>Dept</th>
-              <th>Jabatan</th>
-              <th>Tgl masuk</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={`sk-${i}`}>
-                  <td colSpan={7}>
-                    <div className="skel" style={{ width: `${90 - i * 6}%` }} />
-                  </td>
-                </tr>
-              ))}
-            {!loading &&
-              (data?.items ?? []).map((row) => (
-                <tr
-                  key={row.emp_code}
-                  tabIndex={0}
-                  onClick={() => setSelected(row.emp_code)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setSelected(row.emp_code)
-                    }
+      <ViewBar<SistemEmployee>
+        view={view}
+        onView={setView}
+        density={density}
+        onDensity={setDensity}
+        columns={SISTEM_COLUMNS}
+        groups={SISTEM_GROUPS}
+        hidden={hidden}
+        onHidden={(next) => setHiddenArr([...next])}
+        onExport={exportCsv}
+        selectedCount={picked.size}
+        onClearSelection={() => setPicked(new Set())}
+      />
+
+      {view === 'tabel' ? (
+        <Sheet<SistemEmployee>
+          ariaLabel="Data sistem karyawan (hanya baca)"
+          columns={visibleColumns}
+          groups={SISTEM_GROUPS}
+          rows={items}
+          rowKey={(r) => r.emp_code}
+          frozenKeys={['EmpName']}
+          rowNumberOffset={(page - 1) * LIMIT}
+          loading={loading}
+          // Read-only source: no onCellCommit, so no column is editable.
+          onRowOpen={(row) => setSelected(row.emp_code)}
+          rowHeight={DENSITY_H[density]}
+          selectable
+          selectedKeys={picked}
+          onSelectChange={setPicked}
+          height="calc(100dvh - 14rem)"
+          empty={
+            <div className="empty">
+              <span className="empty__mark" aria-hidden="true">
+                ⌕
+              </span>
+              <p>Tidak ada karyawan sistem yang cocok.</p>
+              <p>Filter dept atau status aktif mungkin terlalu sempit.</p>
+              {(q || dept || active !== 'Y') && (
+                <button
+                  type="button"
+                  className="btn btn--sm"
+                  onClick={() => {
+                    setQ('')
+                    setDept('')
+                    setActive('Y')
                   }}
                 >
-                  <td className="mono">{row.emp_code}</td>
-                  <td>
-                    <span className="cell-name">{String(row.EmpName).trim()}</span>
-                    {row.NewICNo && <span className="cell-sub mono">{row.NewICNo}</span>}
-                  </td>
-                  <td>{row.gender_label || row.Gender}</td>
-                  <td>
-                    <span className="tag">{row.DeptCode ?? '–'}</span>
-                    {row.dept_name && <span className="cell-sub">{String(row.dept_name).trim()}</span>}
-                  </td>
-                  <td>{row.pos_name ? String(row.pos_name).trim() : row.PosCode ?? '–'}</td>
-                  <td className="tnum">{shortDate(row.AppJoinDate)}</td>
-                  <td>
-                    <span className={`tag${row.is_active ? ' tag--accent' : ' tag--muted'}`}>
-                      {row.is_active ? 'aktif' : 'tidak aktif'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        {!loading && (data?.items.length ?? 0) === 0 && (
-          <div className="empty">
-            <span className="empty__mark" aria-hidden="true">
-              ⌕
-            </span>
-            <p>Tidak ada karyawan sistem yang cocok.</p>
-            <p>Filter dept atau status aktif mungkin terlalu sempit.</p>
-            {(q || dept || active !== 'Y') && (
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={() => {
-                  setQ('')
-                  setDept('')
-                  setActive('Y')
-                }}
-              >
-                Bersihkan filter
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+                  Bersihkan filter
+                </button>
+              )}
+            </div>
+          }
+        />
+      ) : (
+        <CardGrid<SistemEmployee>
+          rows={items}
+          rowKey={(r) => r.emp_code}
+          title={(r) => String(r.EmpName).trim()}
+          subtitle={(r) => (r.pos_name ? String(r.pos_name).trim() : r.PosCode) ?? null}
+          fields={cardFields}
+          onOpen={(r) => setSelected(r.emp_code)}
+          loading={loading}
+          selectable
+          selectedKeys={picked}
+          onSelectChange={setPicked}
+          height="calc(100dvh - 16rem)"
+          empty={
+            <div className="empty">
+              <p>Tidak ada karyawan sistem yang cocok.</p>
+            </div>
+          }
+        />
+      )}
 
       <div className="pager">
         <button type="button" className="btn btn--sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>

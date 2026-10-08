@@ -1,8 +1,42 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { actionLabel, api, FIELD_LABELS, type ChangeRow } from '../api'
+import Sheet, { type SheetColumn, type SheetGroup } from '../components/Sheet'
 
-const LIMIT = 100
+const LIMIT = 200
+
+const RIWAYAT_GROUPS: SheetGroup[] = [
+  { label: 'Peristiwa', keys: ['changed_at', 'changed_by', 'action'] },
+  { label: 'Sasaran', keys: ['employee_name', 'employee_id', 'field'] },
+  { label: 'Nilai', keys: ['old_value', 'new_value'] },
+]
+
+/** One decimal from a raw value; '–' for empty. */
+const shown = (v: string | null) => (v == null || v === '' ? '–' : v)
+
+const RIWAYAT_COLUMNS: SheetColumn<ChangeRow>[] = [
+  { key: 'changed_at', label: 'Waktu', group: 'Peristiwa', type: 'date', width: 170,
+    render: (c) => new Date(c.changed_at).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit',
+    }) },
+  { key: 'changed_by', label: 'Oleh', group: 'Peristiwa', type: 'string', width: 140,
+    render: (c) => <span className="cell-name">{c.changed_by ?? '–'}</span> },
+  { key: 'action', label: 'Aksi', group: 'Peristiwa', type: 'string', width: 110,
+    render: (c) => (
+      <span className={`tag${c.action === 'create' ? ' tag--accent' : c.action === 'delete' ? ' tag--danger' : ''}`}>
+        {actionLabel(c.action)}
+      </span>
+    ) },
+  { key: 'employee_name', label: 'Karyawan', group: 'Sasaran', type: 'string', width: 200 },
+  { key: 'employee_id', label: 'ID', group: 'Sasaran', type: 'int', width: 80, align: 'end',
+    render: (c) => <span className="mono">{c.employee_id}</span> },
+  { key: 'field', label: 'Field', group: 'Sasaran', type: 'string', width: 150,
+    render: (c) => (c.field ? FIELD_LABELS[c.field] ?? c.field : '–') },
+  { key: 'old_value', label: 'Nilai lama', group: 'Nilai', type: 'string', width: 200,
+    render: (c) => <span className="riwayat__old mono">{shown(c.old_value)}</span> },
+  { key: 'new_value', label: 'Nilai baru', group: 'Nilai', type: 'string', width: 200,
+    render: (c) => <span className="riwayat__new mono">{shown(c.new_value)}</span> },
+]
 
 /**
  * Riwayat — the audit trail. Who changed what, when. New entries appear via
@@ -74,67 +108,16 @@ export default function Riwayat() {
         </div>
       )}
 
-      <div className="tablewrap">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Waktu</th>
-              <th>Oleh</th>
-              <th>Aksi</th>
-              <th>Karyawan</th>
-              <th>Field</th>
-              <th>Perubahan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={`sk-${i}`}>
-                  <td colSpan={6}>
-                    <div className="skel" style={{ width: `${90 - i * 6}%` }} />
-                  </td>
-                </tr>
-              ))}
-            {!loading &&
-              items.map((c) => (
-                <tr key={c.id}>
-                  <td className="tnum" style={{ whiteSpace: 'nowrap' }}>
-                    {new Date(c.changed_at).toLocaleString('id-ID', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </td>
-                  <td>
-                    <span className="cell-name">{c.changed_by ?? '–'}</span>
-                  </td>
-                  <td>
-                    <span className={`tag${c.action === 'delete' ? '' : c.action === 'create' ? ' tag--accent' : ''}`}>
-                      {actionLabel(c.action)}
-                    </span>
-                  </td>
-                  <td>
-                    {c.employee_name}
-                    <span className="cell-sub mono">ID {c.employee_id}</span>
-                  </td>
-                  <td>{c.field ? FIELD_LABELS[c.field] ?? c.field : '–'}</td>
-                  <td className="mono" style={{ overflowWrap: 'anywhere' }}>
-                    {c.action === 'update' ? (
-                      <>
-                        <span style={{ color: 'var(--color-neutral)' }}>{c.old_value ?? '–'}</span>{' '}
-                        → <span style={{ color: 'var(--color-accent-deep)', fontWeight: 500 }}>{c.new_value ?? '–'}</span>
-                      </>
-                    ) : (
-                      <span>{c.old_value ?? c.new_value ?? '–'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        {!loading && items.length === 0 && (
+      <Sheet<ChangeRow>
+        ariaLabel="Riwayat perubahan karyawan (hanya baca)"
+        columns={RIWAYAT_COLUMNS}
+        groups={RIWAYAT_GROUPS}
+        rows={items}
+        rowKey={(c) => c.id}
+        frozenKeys={['changed_at']}
+        loading={loading}
+        height="calc(100dvh - 15rem)"
+        empty={
           <div className="empty">
             <span className="empty__mark" aria-hidden="true">
               ✓
@@ -145,8 +128,8 @@ export default function Riwayat() {
               Buka Data Manual
             </Link>
           </div>
-        )}
-      </div>
+        }
+      />
     </main>
   )
 }

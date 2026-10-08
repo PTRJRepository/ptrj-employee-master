@@ -9,7 +9,7 @@
 import sql from 'mssql'
 import { Elysia } from 'elysia'
 import { getPool } from '../lib/db/pool'
-import { EMPLOYEE_COLUMNS, EMPLOYEE_FIELDS } from '../lib/employeeSchema'
+import { COLUMN_SCHEMA, EMPLOYEE_COLUMNS, EMPLOYEE_FIELDS, SCHEMA_GROUPS } from '../lib/employeeSchema'
 import { currentUser, intParam, strParam, coerceValue, sqlTypeFor, unauthorized, forbidden } from './common'
 import { canDelete, canEdit } from '../lib/auth/guard'
 import { jsonError, jsonOk } from '../lib/http/json'
@@ -117,6 +117,17 @@ export function manualRoutes(): Elysia {
       totalPages: Math.max(1, Math.ceil(total / limit)),
     })
   })
+
+  // ── Grid schema (column model + grouping tabs) ──────────────────────────
+  // Static: built from the in-process registry, so no DB round-trip. Must be
+  // registered BEFORE '/api/employees/:id' or the :id route captures it.
+  app.get('/api/schema', async () =>
+    jsonOk({
+      columns: COLUMN_SCHEMA,
+      groups: SCHEMA_GROUPS,
+      total: COLUMN_SCHEMA.length,
+    }),
+  )
 
   // ── Watermark for live polling (cheap COUNT + MAX) ──────────────────────
   app.get('/api/employees/watermark', async () => {

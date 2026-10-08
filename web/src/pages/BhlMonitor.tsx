@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, type Employee, type MeResponse } from '../api'
+import Sheet, { type SheetColumn, type SheetGroup } from '../components/Sheet'
 
 const BHL_DAYS = 70
 const MAX_OVERDUE_DAYS = 30 // terlambat maksimal 1 bulan
@@ -43,14 +44,49 @@ const STATUS_CLASS: Record<BhlItem['status'], string> = {
   upcoming: 'tag--muted',
 }
 
+const BHL_GROUPS: SheetGroup[] = [
+  { label: 'Karyawan', keys: ['nama', 'division', 'jabatan'] },
+  { label: 'Penilaian BHL', keys: ['tanggal_masuk', 'days_elapsed', 'days_remaining', 'status'] },
+]
+
+const BHL_COLUMNS: SheetColumn<BhlItem>[] = [
+  { key: 'nama', label: 'Nama', group: 'Karyawan', type: 'string', width: 220,
+    render: (r) => <span className="cell-name">{r.nama}</span> },
+  { key: 'division', label: 'Divisi', group: 'Karyawan', type: 'string', width: 140,
+    render: (r) => (
+      <>
+        <span className="tag">{r.division}</span>
+        {r.sub_divisi && <span className="cell-sub">{r.sub_divisi}</span>}
+      </>
+    ) },
+  { key: 'jabatan', label: 'Jabatan', group: 'Karyawan', type: 'string', width: 170 },
+
+  { key: 'tanggal_masuk', label: 'Tgl masuk', group: 'Penilaian BHL', type: 'date', width: 130 },
+  { key: 'days_elapsed', label: 'Hari ke-', group: 'Penilaian BHL', type: 'int', width: 100, align: 'end' },
+  { key: 'days_remaining', label: 'Sisa hari', group: 'Penilaian BHL', type: 'int', width: 120, align: 'end',
+    render: (r) =>
+      r.days_remaining < 0 ? (
+        <span className="bhl__late">{Math.abs(r.days_remaining)} hari lalu</span>
+      ) : (
+        <span>{r.days_remaining}</span>
+      ) },
+  { key: 'status', label: 'Status', group: 'Penilaian BHL', type: 'string', width: 130,
+    render: (r) => (
+      <span className={`tag ${STATUS_CLASS[r.status]}`}>{STATUS_LABEL[r.status]}</span>
+    ) },
+]
+
 export default function BhlMonitor({ me }: { me: MeResponse }) {
   const [data, setData] = useState<BhlItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<'all' | 'overdue' | 'warning' | 'upcoming'>('all')
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  /** Bookkeeping for the live poll (last seen count + updated_at high-water mark). */
+  const lastWm = useRef({ total: -1, watermark: -1 })
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const res = await api.listEmployees({ limit: 500, sort: 'tanggal_masuk', dir: 'desc' })
       const items: BhlItem[] = res.items
@@ -80,6 +116,26 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
 
   useEffect(() => {
     load()
+  }, [load])
+
+  // Live, like every other data surface in the module. This page previously had
+  // no poll at all, so `days_elapsed` / `days_remaining` silently drifted out of
+  // date for as long as the tab stayed open — a BHL date crossing 70 days would
+  // not appear until a manual reload. Poll the cheap watermark and only refetch
+  // when the underlying data actually moved.
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      try {
+        const wm = await api.watermark()
+        if (wm.total !== lastWm.current.total || wm.watermark !== lastWm.current.watermark) {
+          lastWm.current = wm
+          load(true)
+        }
+      } catch {
+        /* transient — the next tick retries */
+      }
+    }, 5000)
+    return () => window.clearInterval(id)
   }, [load])
 
   const filtered = filter === 'all' ? data : data.filter((d) => d.status === filter)
@@ -129,65 +185,21 @@ export default function BhlMonitor({ me }: { me: MeResponse }) {
         </div>
       )}
 
-      <div className="tablewrap">
-        <table className="data">
-          <thead>
-            <tr>
-              <th className="row-num">#</th>
-              <th>Nama</th>
-              <th>Divisi</th>
-              <th>Jabatan</th>
-              <th>Tgl Masuk</th>
-              <th>Hari Ke-</th>
-              <th>Sisa Hari</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={`sk-${i}`}>
-                  <td colSpan={8}>
-                    <div className="skel" style={{ width: `${90 - i * 6}%` }} />
-                  </td>
-                </tr>
-              ))}
-            {!loading &&
-              filtered.map((row, idx) => (
-                <tr key={row.id}>
-                  <td className="row-num">{idx + 1}</td>
-                  <td>
-                    <span className="cell-name">{row.nama}</span>
-                  </td>
-                  <td>
-                    <span className="tag">{row.division}</span>
-                    {row.sub_divisi && <span className="cell-sub">{row.sub_divisi}</span>}
-                  </td>
-                  <td>{row.jabatan}</td>
-                  <td className="tnum">{new Date(row.tanggal_masuk).toLocaleDateString('id-ID')}</td>
-                  <td className="tnum">{row.days_elapsed}</td>
-                  <td className="tnum">
-                    {row.days_remaining < 0 ? (
-                      <span style={{ color: 'var(--color-error)' }}>{Math.abs(row.days_remaining)} hari lalu</span>
-                    ) : (
-                      row.days_remaining
-                    )}
-                  </td>
-                  <td>
-                    <span className={`tag ${STATUS_CLASS[row.status]}`}>
-                      {STATUS_LABEL[row.status]}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        {!loading && filtered.length === 0 && (
+      <Sheet<BhlItem>
+        ariaLabel="Monitor BHL (penilaian 70 hari)"
+        columns={BHL_COLUMNS}
+        groups={BHL_GROUPS}
+        rows={filtered}
+        rowKey={(r) => r.id}
+        frozenKeys={['nama']}
+        loading={loading}
+        height="calc(100dvh - 15rem)"
+        empty={
           <div className="empty">
             <p>Tidak ada data BHL untuk filter ini.</p>
           </div>
-        )}
-      </div>
+        }
+      />
 
       <div className="statusbar">
         <span className="status-item">
